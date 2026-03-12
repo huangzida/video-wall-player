@@ -16,10 +16,10 @@
   - [x] 验证 `docs/` 目录下是否生成了 `index.html` 和相关资源。
   - [x] (可选) 本地预览 `docs/` 目录确保运行正常。
 
-- [ ] 任务 4：更新文档和元数据
-  - [ ] 更新 `package.json` 的 `author` 字段，格式："用户名 <邮箱> + 演示地址"。
-  - [ ] 更新 `README.md`，添加“## 在线演示”小节，并附上链接 `[点击查看 Live Demo](https://huangzida.github.io/video-wall-player/)`。
+- [x] 任务 4：更新文档和元数据
+  - [x] 更新 `package.json` 的 `author` 字段，格式："用户名 <邮箱> + 演示地址"。
+  - [x] 更新 `README.md`，添加“## 在线演示”小节，并附上链接 `[点击查看 Live Demo](https://huangzida.github.io/video-wall-player/)`。
 
-- [ ] 任务 5：提交并推送
-  - [ ] 提交所有更改，包括生成的 `docs/` 文件夹。
-  - [ ] 推送到默认分支。
+- [x] 任务 5：提交并推送
+  - [x] 提交所有更改，包括生成的 `docs/` 文件夹。
+  - [x] 推送到默认分支。
