@@ -57,10 +57,17 @@ const resources = [
 
 ## Props
 
-| 属性名 | 类型 | 说明 |
-| --- | --- | --- |
-| `resources` | `VideoWallResource[]` | 要播放的资源列表。 |
-| `title` | `string` | 可选标题。 |
+| 属性名 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `resources` | `VideoWallResource[]` | `[]` | 要播放的资源列表。 |
+| `title` | `string` | `''` | 侧边栏显示的标题。 |
+| `autoplay` | `boolean` | `false` | 是否自动播放。 |
+| `muted` | `boolean` | `false` | 是否默认静音。 |
+| `loop` | `boolean` | `false` | 是否循环播放。 |
+| `aspectRatio` | `number` | `16/9` | 单个视频格子的宽高比。 |
+| `gap` | `number` | `8` | 视频格子之间的间距（像素）。 |
+| `showControls` | `boolean` | `true` | 是否显示底部控制栏。 |
+| `objectFit` | `'contain' \| 'cover' \| 'fill'` | `'contain'` | 视频画面的填充模式。 |
 
 ### VideoWallResource 类型定义
 
@@ -70,6 +77,7 @@ interface VideoWallResource {
   name: string;        // 显示名称
   chunkUrls: string[]; // 分片 URL 列表
   durations: number[]; // 对应的分片时长列表（秒）
+  poster?: string;     // 可选的封面图 URL
 }
 ```
 

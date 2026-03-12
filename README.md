@@ -57,10 +57,17 @@ const resources = [
 
 ## Props
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `resources` | `VideoWallResource[]` | List of resources to play. |
-| `title` | `string` | Optional title. |
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `resources` | `VideoWallResource[]` | `[]` | List of resources to play. |
+| `title` | `string` | `''` | Optional title displayed in the sidebar. |
+| `autoplay` | `boolean` | `false` | Whether to start playing automatically. |
+| `muted` | `boolean` | `false` | Whether to mute all videos by default. |
+| `loop` | `boolean` | `false` | Whether to loop playback when the playlist ends. |
+| `aspectRatio` | `number` | `16/9` | Aspect ratio of individual video tiles. |
+| `gap` | `number` | `8` | Gap between video tiles in pixels. |
+| `showControls` | `boolean` | `true` | Whether to show the bottom control bar. |
+| `objectFit` | `'contain' \| 'cover' \| 'fill'` | `'contain'` | Object fit mode for video elements. |
 
 ### VideoWallResource Interface
 
@@ -70,6 +77,7 @@ interface VideoWallResource {
   name: string;        // Display name
   chunkUrls: string[]; // List of chunk URLs
   durations: number[]; // List of durations for each chunk (in seconds)
+  poster?: string;     // Optional poster image URL
 }
 ```
 

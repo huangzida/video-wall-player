@@ -175,8 +175,9 @@ const handleVolumeMouseLeave = () => {
 const handleVolumeChange = (e: MouseEvent) => {
   if (!volumeSliderRef.value) return;
   const rect = volumeSliderRef.value.getBoundingClientRect();
-  const percent = 1 - (e.clientY - rect.top) / rect.height;
-  const newVolume = Math.max(0, Math.min(100, Math.round(percent * 100)));
+  // Horizontal slider logic
+  const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  const newVolume = Math.round(percent * 100);
   emit('volumeChange', newVolume);
 };
 
@@ -190,77 +191,74 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex items-center gap-3 px-4 py-1 text-white bg-gradient-to-t from-black/70 to-transparent absolute bottom-0 left-0 right-0 z-10 select-none">
+  <div class="flex items-center gap-4 px-6 py-3 text-gray-200 bg-black/80 backdrop-blur-md border-t border-white/10 absolute bottom-0 left-0 right-0 z-50 select-none transition-all duration-300 hover:bg-black/90">
     <!-- Left Controls -->
-    <div class="flex items-center gap-2">
-      <div v-if="showSpeedDown" class="p-1 cursor-pointer hover:bg-white/10 rounded transition-transform active:scale-95" @click="handleSpeedDown">
+    <div class="flex items-center gap-1">
+      <div v-if="showSpeedDown" class="p-2 cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleSpeedDown">
         <Rewind class="w-5 h-5" />
       </div>
-      <div class="p-1 cursor-pointer hover:bg-white/25 rounded transition-transform active:scale-95" @click="handlePlayPause">
-        <Pause v-if="isPlaying" class="w-6 h-6" />
-        <Play v-else class="w-6 h-6" />
+      <div class="p-2 cursor-pointer hover:bg-blue-500 hover:text-white rounded-full transition-all active:scale-90 mx-1" @click="handlePlayPause">
+        <Pause v-if="isPlaying" class="w-6 h-6 fill-current" />
+        <Play v-else class="w-6 h-6 fill-current" />
       </div>
-      <div v-if="showSpeedUp" class="p-1 cursor-pointer hover:bg-white/10 rounded transition-transform active:scale-95" @click="handleSpeedUp">
+      <div v-if="showSpeedUp" class="p-2 cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleSpeedUp">
         <FastForward class="w-5 h-5" />
       </div>
     </div>
 
     <!-- Center Progress -->
-    <div class="flex-1 flex items-center gap-3 min-w-0">
+    <div class="flex-1 flex items-center gap-4 min-w-0 group/progress">
+      <span class="font-mono text-xs text-gray-400 min-w-[48px] text-right">{{ formatTime(currentTime) }}</span>
+      
       <div
         ref="progressBarRef"
-        class="flex-1 h-8 flex items-center cursor-pointer relative group"
+        class="flex-1 h-8 flex items-center cursor-pointer relative group/bar"
         :class="{ 'cursor-grabbing': isDraggingProgress }"
         @click="handleProgressTrackClick"
       >
         <!-- Track -->
-        <div class="w-full h-1.5 bg-white/30 rounded-full relative overflow-visible transition-all group-hover:h-1.5">
+        <div class="w-full h-1 bg-white/10 rounded-full relative overflow-visible transition-all duration-300 group-hover/bar:h-1.5 group-hover/bar:bg-white/20">
           <!-- Played -->
           <div
-            class="absolute top-0 left-0 h-full bg-blue-500 rounded-full transition-[width] duration-100 ease-linear"
+            class="absolute top-0 left-0 h-full bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-[width] duration-100 ease-linear"
             :style="{ width: `${isDraggingProgress ? draggingProgress * 100 : (currentTime / duration) * 100 || 0}%` }"
-          ></div>
+          >
+            <!-- Thumb (Only visible on hover) -->
+            <div
+              class="absolute right-0 top-1/2 w-3.5 h-3.5 bg-white rounded-full -translate-y-1/2 translate-x-1/2 shadow-md opacity-0 group-hover/progress:opacity-100 transition-opacity duration-200 scale-0 group-hover/progress:scale-100"
+              :class="{ 'opacity-100 scale-100': isDraggingProgress }"
+              @mousedown="handleThumbMouseDown"
+            ></div>
+          </div>
           
           <!-- Tags -->
           <div
             v-for="tag in tags"
             :key="tag.id"
-            class="absolute top-1/2 w-3 h-3 bg-red-500 border-2 border-white rounded-full -translate-y-1/2 -translate-x-1/2 hover:scale-125 z-10 transition-transform"
+            class="absolute top-1/2 w-2 h-2 bg-yellow-500 rounded-full -translate-y-1/2 -translate-x-1/2 hover:scale-150 hover:bg-yellow-400 z-10 transition-all cursor-help"
             :style="{ left: `${(tag.time / duration) * 100}%` }"
             :title="tag.text"
             @click.stop="handleTagClick(tag)"
           ></div>
-
-          <!-- Thumb -->
-          <div
-            class="absolute top-1/2 w-3 h-3 bg-white rounded-full -translate-y-1/2 -translate-x-1/2 shadow-sm opacity-0 group-hover:opacity-100 transition-all z-20"
-            :class="{ 'opacity-100 w-4 h-4': isDraggingProgress }"
-            :style="{ left: `${isDraggingProgress ? draggingProgress * 100 : (currentTime / duration) * 100 || 0}%` }"
-            @mousedown="handleThumbMouseDown"
-          ></div>
         </div>
       </div>
 
-      <div class="flex items-center gap-1 font-mono text-sm text-white/90 whitespace-nowrap">
-        <span>{{ formatTime(currentTime) }}</span>
-        <span class="text-white/60">/</span>
-        <span>{{ formatTime(duration) }}</span>
-      </div>
+      <span class="font-mono text-xs text-gray-500 min-w-[48px]">{{ formatTime(duration) }}</span>
     </div>
 
     <!-- Right Controls -->
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2">
       <!-- Rate -->
-      <div v-if="showPlaybackRate" class="relative">
-        <div class="px-3 h-8 flex items-center justify-center bg-white/10 rounded cursor-pointer hover:bg-white/20 transition-colors" @click="handleRateClick">
-          <span class="text-sm font-medium">{{ playbackRate }}x</span>
+      <div v-if="showPlaybackRate" class="relative group/rate">
+        <div class="px-3 py-1.5 flex items-center justify-center bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 hover:text-white transition-colors border border-white/5" @click="handleRateClick">
+          <span class="text-xs font-bold tracking-wider">{{ playbackRate }}x</span>
         </div>
-        <div v-if="showRateList" class="absolute right-0 bottom-full mb-2 min-w-[60px] py-1 bg-black/85 rounded-md shadow-lg backdrop-blur-sm">
+        <div v-if="showRateList" class="absolute right-0 bottom-full mb-3 min-w-[80px] py-1 bg-[#1a1a1a] border border-white/10 rounded-lg shadow-xl backdrop-blur-md overflow-hidden z-20">
           <div
             v-for="rate in playbackRates"
             :key="rate"
-            class="px-4 py-2 text-sm text-center cursor-pointer hover:bg-white/10 transition-colors"
-            :class="{ 'text-blue-500 font-medium': rate === playbackRate }"
+            class="px-4 py-2 text-xs text-center cursor-pointer transition-colors"
+            :class="rate === playbackRate ? 'bg-blue-500/20 text-blue-400 font-bold' : 'text-gray-400 hover:bg-white/5 hover:text-white'"
             @click="handleRateChange(rate)"
           >
             {{ rate }}x
@@ -269,42 +267,43 @@ onUnmounted(() => {
       </div>
 
       <!-- Volume -->
-      <div class="relative" @mouseenter="handleVolumeMouseEnter" @mouseleave="handleVolumeMouseLeave">
-        <div class="w-8 h-8 flex items-center justify-center rounded cursor-pointer hover:bg-white/10" @click="handleVolumeClick">
-          <VolumeX v-if="isMuted" class="w-5 h-5 opacity-50" />
-          <Volume2 v-else-if="volume > 0" class="w-5 h-5" />
-          <VolumeX v-else class="w-5 h-5 opacity-50" />
+      <div class="relative flex items-center" @mouseenter="handleVolumeMouseEnter" @mouseleave="handleVolumeMouseLeave">
+        <div class="p-2 flex items-center justify-center rounded-full cursor-pointer hover:bg-white/10 hover:text-white text-gray-400 transition-colors" @click="handleVolumeClick">
+          <VolumeX v-if="isMuted || volume === 0" class="w-5 h-5" />
+          <Volume2 v-else class="w-5 h-5" />
         </div>
         
-        <!-- Volume Slider -->
-        <div v-if="showVolumeSlider" class="absolute right-0 bottom-full pb-5">
-           <div class="p-3 bg-black/85 rounded-md shadow-lg backdrop-blur-sm">
-             <div ref="volumeSliderRef" class="w-8 h-28 flex justify-center cursor-pointer relative" @click="handleVolumeChange">
-               <div class="w-1.5 h-full bg-white/30 rounded-full relative">
-                 <div
-                   class="absolute bottom-0 left-0 w-full bg-blue-500 rounded-full transition-[height] duration-100"
-                   :class="{ 'bg-white/50': isMuted }"
-                   :style="{ height: `${volume}%` }"
-                 ></div>
-                 <div
-                   class="absolute left-1/2 w-2.5 h-2.5 bg-white rounded-full -translate-x-1/2 shadow-sm transition-all"
-                   :class="{ 'bg-white/50': isMuted }"
-                   :style="{ bottom: `${volume}%`, transform: 'translate(-50%, 50%)' }"
-                 ></div>
-               </div>
+        <!-- Volume Slider (Horizontal expand) -->
+        <div 
+          class="overflow-hidden transition-all duration-300 ease-out"
+          :class="showVolumeSlider ? 'w-24 opacity-100 ml-2' : 'w-0 opacity-0'"
+        >
+           <div class="h-8 flex items-center px-1">
+             <div ref="volumeSliderRef" class="w-full h-1 bg-white/20 rounded-full cursor-pointer relative group/vol" @click="handleVolumeChange">
+               <div
+                 class="absolute top-0 left-0 h-full bg-blue-500 rounded-full"
+                 :class="{ 'bg-gray-500': isMuted }"
+                 :style="{ width: `${volume}%` }"
+               ></div>
+               <div
+                 class="absolute top-1/2 w-3 h-3 bg-white rounded-full -translate-y-1/2 -translate-x-1/2 shadow-sm opacity-0 group-hover/vol:opacity-100 transition-opacity"
+                 :style="{ left: `${volume}%` }"
+               ></div>
              </div>
            </div>
         </div>
       </div>
 
-      <!-- Fullscreen -->
-      <div class="w-8 h-8 flex items-center justify-center rounded cursor-pointer hover:bg-white/10" @click="handleFullscreen">
-        <Maximize class="w-5 h-5" />
-      </div>
+      <div class="w-px h-6 bg-white/10 mx-1"></div>
 
       <!-- Stop -->
-      <div v-if="showStop" class="w-8 h-8 flex items-center justify-center rounded cursor-pointer hover:text-red-500 transition-colors" @click="handleStopPlay">
+      <div v-if="showStop" class="p-2 flex items-center justify-center rounded-full cursor-pointer text-gray-400 hover:bg-red-500/20 hover:text-red-500 transition-all active:scale-90" @click="handleStopPlay">
         <X class="w-5 h-5" />
+      </div>
+
+      <!-- Fullscreen -->
+      <div class="p-2 flex items-center justify-center rounded-full cursor-pointer text-gray-400 hover:bg-white/10 hover:text-white transition-all active:scale-90" @click="handleFullscreen">
+        <Maximize class="w-5 h-5" />
       </div>
     </div>
   </div>
