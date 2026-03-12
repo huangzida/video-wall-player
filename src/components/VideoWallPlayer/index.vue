@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch, onMounted } from 'vue';
 import { useFullscreen } from '@vueuse/core';
 import { AudioLines, Volume2, VolumeX } from 'lucide-vue-next';
 import PlayerControls from '../PlayerControls/index.vue';
@@ -67,16 +67,17 @@ watch(() => props.resources, (newResources) => {
         individualMutedStates.value[item.id] = true;
       });
     }
-
-    if (props.autoplay) {
-      nextTick(() => {
-        setTimeout(() => {
-          void playAllVideos();
-        }, 100);
-      });
-    }
   }
 }, { immediate: true, deep: true });
+
+onMounted(() => {
+  if (props.autoplay && localResources.value.length > 0) {
+    // Give a small buffer for elements to be ready
+    setTimeout(() => {
+      void playAllVideos();
+    }, 500);
+  }
+});
 
 const { containerRef, layout } = useVideoWallLayout(itemCount, computed(() => ({
   aspectRatio: props.aspectRatio,

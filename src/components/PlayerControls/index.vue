@@ -194,14 +194,14 @@ onUnmounted(() => {
   <div class="flex items-center gap-4 px-6 py-3 text-gray-200 bg-black/80 backdrop-blur-md border-t border-white/10 absolute bottom-0 left-0 right-0 z-50 select-none transition-all duration-300 hover:bg-black/90">
     <!-- Left Controls -->
     <div class="flex items-center gap-1">
-      <div v-if="showSpeedDown" class="p-2 cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleSpeedDown">
+      <div v-if="showSpeedDown" class="p-2 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleSpeedDown">
         <Rewind class="w-5 h-5" />
       </div>
-      <div class="p-2 cursor-pointer hover:bg-blue-500 hover:text-white rounded-full transition-all active:scale-90 mx-1" @click="handlePlayPause">
+      <div class="p-2 flex items-center justify-center cursor-pointer hover:bg-blue-500 hover:text-white rounded-full transition-all active:scale-90 mx-1" @click="handlePlayPause">
         <Pause v-if="isPlaying" class="w-6 h-6 fill-current" />
         <Play v-else class="w-6 h-6 fill-current" />
       </div>
-      <div v-if="showSpeedUp" class="p-2 cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleSpeedUp">
+      <div v-if="showSpeedUp" class="p-2 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleSpeedUp">
         <FastForward class="w-5 h-5" />
       </div>
     </div>
@@ -251,7 +251,7 @@ onUnmounted(() => {
       <!-- Rate -->
       <div v-if="showPlaybackRate" class="relative group/rate">
         <div class="px-3 py-1.5 flex items-center justify-center bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 hover:text-white transition-colors border border-white/5" @click="handleRateClick">
-          <span class="text-xs font-bold tracking-wider">{{ playbackRate }}x</span>
+          <span class="text-xs font-bold tracking-wider">{{ playbackRate }}×</span>
         </div>
         <div v-if="showRateList" class="absolute right-0 bottom-full mb-3 min-w-[80px] py-1 bg-[#1a1a1a] border border-white/10 rounded-lg shadow-xl backdrop-blur-md overflow-hidden z-20">
           <div
