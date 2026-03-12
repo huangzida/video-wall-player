@@ -1,0 +1,75 @@
+# Video Wall Player
+
+一个功能强大的 Vue 3 组件，用于在响应式网格布局中播放同步视频流。非常适合监控系统、多摄像头回放和视频墙应用。
+
+[在线演示](https://<username>.github.io/video-wall-player/) (请替换为您的实际 GitHub Pages 链接)
+
+## 功能特性
+
+- 🎥 **多流同步**: 基于主视频流同步多个视频/音频流。
+- 🧩 **响应式网格**: 根据视频流数量和容器尺寸自动计算最佳网格布局。
+- 🖱️ **拖拽排序**: 支持通过拖放重新排序视频画面。
+- 🔊 **音频支持**: 处理视频和音频分片（支持 .wav）。
+- 🎛️ **高级控制**: 支持倍速播放、进度跳转、音量控制和全屏模式。
+- 🎨 **Tailwind CSS**: 使用 Tailwind CSS 构建，易于定制。
+
+## 安装
+
+```bash
+npm install video-wall-player
+# 或
+pnpm add video-wall-player
+```
+
+确保您的项目中已安装 `vue` 和 `@vueuse/core`。
+
+## 使用方法
+
+```vue
+<script setup lang="ts">
+import { VideoWallPlayer } from 'video-wall-player';
+import 'video-wall-player/dist/style.css'; // 如果需要
+
+const resources = [
+  {
+    id: 'camera-01',
+    name: 'Camera 1',
+    chunkUrls: ['https://example.com/video1_part1.mp4', 'https://example.com/video1_part2.mp4'],
+    durations: [120, 120]
+  },
+  // ... 其他流
+];
+</script>
+
+<template>
+  <div class="h-screen w-full">
+    <VideoWallPlayer
+      :resources="resources"
+      title="监控墙"
+      @error="console.error"
+    />
+  </div>
+</template>
+```
+
+## Props
+
+| 属性名 | 类型 | 说明 |
+| --- | --- | --- |
+| `resources` | `VideoWallResource[]` | 要播放的资源列表。 |
+| `title` | `string` | 可选标题。 |
+
+### VideoWallResource 类型定义
+
+```typescript
+interface VideoWallResource {
+  id: string;          // 唯一标识符
+  name: string;        // 显示名称
+  chunkUrls: string[]; // 分片 URL 列表
+  durations: number[]; // 对应的分片时长列表（秒）
+}
+```
+
+## 许可证
+
+MIT

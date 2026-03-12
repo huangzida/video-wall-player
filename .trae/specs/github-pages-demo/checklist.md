@@ -1,0 +1,8 @@
+- [ ] 已安装 `vite` 和 `@vitejs/plugin-vue`。
+- [ ] `vite.config.ts` 已创建并正确配置构建输出目录为 `docs/`。
+- [ ] `demo/` 目录包含可运行的演示代码，且使用了指定的测试视频流。
+- [ ] `docs/` 目录包含构建后的资源（`index.html` 等）。
+- [ ] `package.json` 包含 `demo:build` 脚本。
+- [ ] `package.json` 的 `author` 字段包含正确的 GitHub Pages URL。
+- [ ] `README.md` 包含“在线演示”小节和正确的链接。
+- [ ] Git 提交包含 `docs/` 文件夹。
