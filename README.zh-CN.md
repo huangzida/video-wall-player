@@ -2,7 +2,10 @@
 
 一个功能强大的 Vue 3 组件，用于在响应式网格布局中播放同步视频流。非常适合监控系统、多摄像头回放和视频墙应用。
 
-[在线演示](https://<username>.github.io/video-wall-player/) (请替换为您的实际 GitHub Pages 链接)
+## 在线演示
+[点击查看在线演示](https://huangzida.github.io/video-wall-player/)
+
+[English Documentation](./README.md) | [Demo](https://huangzida.github.io/video-wall-player/)
 
 ## 功能特性
 
