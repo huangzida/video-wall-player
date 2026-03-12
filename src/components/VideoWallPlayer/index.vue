@@ -12,9 +12,23 @@ defineOptions({ name: 'VideoWallPlayer' });
 const props = withDefaults(defineProps<{
   resources: VideoWallResource[];
   title?: string;
+  autoplay?: boolean;
+  muted?: boolean;
+  loop?: boolean;
+  aspectRatio?: number;
+  gap?: number;
+  showControls?: boolean;
+  objectFit?: 'contain' | 'cover' | 'fill';
 }>(), {
   resources: () => [],
   title: '',
+  autoplay: false,
+  muted: false,
+  loop: false,
+  aspectRatio: 16 / 9,
+  gap: 8,
+  showControls: true,
+  objectFit: 'contain',
 });
 
 const emit = defineEmits<{
@@ -46,18 +60,34 @@ const localResources = ref<VideoWallResource[]>([]);
 
 watch(() => props.resources, (newResources) => {
   localResources.value = [...newResources];
+  
+  if (newResources.length > 0) {
+    if (props.muted) {
+      newResources.forEach((item) => {
+        individualMutedStates.value[item.id] = true;
+      });
+    }
+
+    if (props.autoplay) {
+      nextTick(() => {
+        setTimeout(() => {
+          void playAllVideos();
+        }, 100);
+      });
+    }
+  }
 }, { immediate: true, deep: true });
 
-const { containerRef, layout } = useVideoWallLayout(itemCount, {
-  aspectRatio: 16 / 9,
-  gap: 8,
-});
+const { containerRef, layout } = useVideoWallLayout(itemCount, computed(() => ({
+  aspectRatio: props.aspectRatio,
+  gap: props.gap,
+})));
 
 const gridStyle = computed(() => ({
   display: 'grid',
   gridTemplateColumns: `repeat(${layout.value.cols}, ${layout.value.itemWidth}px)`,
   gridTemplateRows: `repeat(${layout.value.rows}, ${layout.value.itemHeight}px)`,
-  gap: '8px',
+  gap: `${props.gap}px`,
   justifyContent: 'center',
   alignContent: 'center',
   width: '100%',
@@ -313,7 +343,13 @@ function locateByGlobalTime(target: number) {
 
 async function handlePrimaryEnded() {
   const totalChunks = segmentList.value.length;
-  if (totalChunks <= 0 || activeChunkIndex.value >= totalChunks - 1) {
+  if (totalChunks <= 0) return;
+
+  if (activeChunkIndex.value >= totalChunks - 1) {
+    if (props.loop) {
+      await switchChunk(0, 0, true);
+      return;
+    }
     isPlaying.value = false;
     return;
   }
@@ -368,11 +404,11 @@ defineExpose({
 </script>
 
 <template>
-  <div class="flex h-full min-h-[500px] gap-4 bg-black/95 p-3 text-white">
+  <div class="flex w-full h-full min-h-[500px] gap-4 bg-black/80 p-3 text-white">
     <!-- Sidebar -->
     <div class="w-[280px] flex flex-col rounded bg-white/10 p-3">
       <div class="mb-3 text-base font-medium flex justify-between">
-        <span>Segments</span>
+        <span>{{ title || 'Segments' }}</span>
         <span class="text-xs text-gray-400 self-center">{{ formatTime(duration) }}</span>
       </div>
       <div class="flex-1 overflow-y-auto custom-scrollbar">
@@ -426,8 +462,10 @@ defineExpose({
             <video
               v-else
               :ref="(el) => setMediaRef(item.id, el as HTMLVideoElement)"
-              class="h-full w-full bg-black object-contain"
+              class="h-full w-full bg-black"
+              :style="{ objectFit: objectFit }"
               :src="item.chunkUrls[activeChunkIndex] || ''"
+              :poster="item.poster"
               playsinline
               preload="metadata"
               @timeupdate="item.id === primaryId ? syncCurrentTimeFromPrimary() : undefined"
@@ -464,7 +502,7 @@ defineExpose({
       </div>
 
       <!-- Controls -->
-      <div class="mt-2 min-h-[40px]">
+      <div v-if="showControls" class="mt-2 min-h-[40px]">
         <PlayerControls
           :is-playing="isPlaying"
           :current-time="currentTime"

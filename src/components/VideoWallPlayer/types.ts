@@ -3,4 +3,5 @@ export interface VideoWallResource {
   name: string;
   chunkUrls: string[];
   durations: number[];
+  poster?: string;
 }
