@@ -68,7 +68,6 @@ const resources = [
 | `gap` | `number` | `8` | 视频格子之间的间距（像素）。 |
 | `showControls` | `boolean` | `true` | 是否显示底部控制栏。 |
 | `objectFit` | `'contain' \| 'cover' \| 'fill'` | `'contain'` | 视频画面的填充模式。 |
-
 | `theme` | `'default' \| 'cyberpunk' \| 'industrial' \| 'minimalist'` | `'default'` | 播放器 UI 主题。 |
 | `draggable` | `boolean` | `true` | 是否启用拖拽排序。 |
 | `showTileTitle` | `boolean` | `true` | 是否显示视频格子的标题浮层。 |
@@ -76,7 +75,10 @@ const resources = [
 | `showSidebar` | `boolean` | `true` | 是否显示侧边栏。 |
 | `showPrevNextChunk` | `boolean` | `true` | 是否显示上一个/下一个片段按钮。 |
 | `showStepSkip` | `boolean` | `true` | 是否显示快退/快进按钮。 |
+| `showSpeedControl` | `boolean` | `true` | 是否显示播放按钮两侧的快进/快退（倍速调整）按钮。 |
+| `showPlaybackRate` | `boolean` | `true` | 是否显示倍速切换按钮（如 1x）。 |
 | `stepSeconds` | `number` | `5` | 快退/快进的步进秒数。 |
+| `fixedTileMeta` | `boolean` | `true` | 视频格子的标题和静音按钮是固定显示 (true) 还是悬停显示 (false)。 |
 | `tags` | `VideoWallTag[]` | `[]` | 时间轴打点列表。 |
 
 ### VideoWallResource 类型定义
@@ -97,6 +99,7 @@ interface VideoWallResource {
 interface VideoWallTag {
   time: number; // 时间点（秒）
   name: string; // Tooltip 显示的打点名称
+  color?: string; // 可选的打点颜色（如 '#ff0000', 'red'）
 }
 ```
 

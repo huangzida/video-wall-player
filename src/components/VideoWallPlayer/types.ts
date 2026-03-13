@@ -1,6 +1,7 @@
 export interface VideoWallTag {
   time: number;
   name: string;
+  color?: string;
 }
 
 export interface VideoWallResource {

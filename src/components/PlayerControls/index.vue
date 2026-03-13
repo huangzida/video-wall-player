@@ -20,6 +20,7 @@ export interface Tag {
   id: string | number;
   time: number;
   text: string;
+  color?: string;
 }
 
 interface Props {
@@ -275,13 +276,14 @@ onUnmounted(() => {
           <div
             v-for="tag in tags"
             :key="tag.id"
-            class="absolute top-1/2 w-2 h-2 bg-yellow-500 rounded-full -translate-y-1/2 -translate-x-1/2 hover:scale-150 hover:bg-yellow-400 z-10 transition-all cursor-help group/tag"
-            :style="{ left: `${(tag.time / duration) * 100}%` }"
+            class="absolute top-1/2 w-2 h-2 rounded-full -translate-y-1/2 -translate-x-1/2 hover:scale-150 z-10 transition-all cursor-help group/tag"
+            :class="!tag.color ? 'bg-yellow-500 hover:bg-yellow-400' : ''"
+            :style="{ left: `${(tag.time / duration) * 100}%`, backgroundColor: tag.color }"
             @click.stop="handleTagClick(tag)"
           >
             <!-- Tooltip -->
-            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black/80 text-white text-xs rounded opacity-0 group-hover/tag:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-white/10 backdrop-blur-sm shadow-xl">
-              {{ tag.text }}
+            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black/80 text-white text-xs rounded opacity-0 group-hover/tag:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-white/10 backdrop-blur-sm shadow-xl z-50">
+              {{ tag.name }}
               <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-black/80"></div>
             </div>
           </div>

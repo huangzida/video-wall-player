@@ -27,7 +27,10 @@ const props = withDefaults(defineProps<{
   tags?: VideoWallTag[];
   showPrevNextChunk?: boolean;
   showStepSkip?: boolean;
+  showPlaybackRate?: boolean;
+  showSpeedControl?: boolean;
   stepSeconds?: number;
+  fixedTileMeta?: boolean;
 }>(), {
   resources: () => [],
   title: '',
@@ -46,7 +49,10 @@ const props = withDefaults(defineProps<{
   tags: () => [],
   showPrevNextChunk: true,
   showStepSkip: true,
+  showPlaybackRate: true,
+  showSpeedControl: true,
   stepSeconds: 5,
+  fixedTileMeta: true,
 });
 
 const emit = defineEmits<{
@@ -529,7 +535,11 @@ defineExpose({
             </div>
 
             <!-- Meta Overlay -->
-            <div v-if="showTileTitle" class="absolute left-0 top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+            <div
+              v-if="showTileTitle"
+              class="absolute left-0 top-0 right-0 p-3 transition-opacity duration-200 bg-gradient-to-b from-black/80 to-transparent pointer-events-none"
+              :class="fixedTileMeta ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
+            >
               <div class="inline-flex items-center gap-2 px-2 py-1 rounded bg-black/40 border border-white/10 backdrop-blur-md">
                 <div class="w-1.5 h-1.5 rounded-full" :class="isPlaying ? 'bg-green-500 animate-pulse' : 'bg-gray-500'"></div>
                 <span class="text-[10px] font-medium tracking-wide text-gray-200">{{ item.name || item.id }}</span>
@@ -539,7 +549,8 @@ defineExpose({
             <!-- Mute Button -->
             <div
               v-if="showTileMute"
-              class="absolute bottom-3 right-3 z-30 cursor-pointer rounded-full bg-black/40 p-2 text-white/80 border border-white/5 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white hover:scale-110 active:scale-95 opacity-0 group-hover:opacity-100"
+              class="absolute bottom-3 right-3 z-30 cursor-pointer rounded-full bg-black/40 p-2 text-white/80 border border-white/5 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white hover:scale-110 active:scale-95"
+              :class="fixedTileMeta ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
               @click.stop="toggleIndividualMute(item.id)"
             >
               <VolumeX v-if="individualMutedStates[item.id]" class="w-3.5 h-3.5" />
@@ -568,6 +579,9 @@ defineExpose({
           :tags="tags"
           :show-prev-next-chunk="showPrevNextChunk"
           :show-step-skip="showStepSkip"
+          :show-playback-rate="showPlaybackRate"
+          :show-speed-down="showSpeedControl"
+          :show-speed-up="showSpeedControl"
           :step-seconds="stepSeconds"
           @speed-down="handleSpeedDown"
           @play-pause="handlePlayPause"

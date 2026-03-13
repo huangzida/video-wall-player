@@ -55,12 +55,15 @@ const showTileMute = useStorage('demo-show-tile-mute', true);
 const showSidebar = useStorage('demo-show-sidebar', true);
 const showPrevNextChunk = useStorage('demo-show-prev-next-chunk', true);
 const showStepSkip = useStorage('demo-show-step-skip', true);
+const showPlaybackRate = useStorage('demo-show-playback-rate', true);
+const showSpeedControl = useStorage('demo-show-speed-control', true);
+const fixedTileMeta = useStorage('demo-fixed-tile-meta', true);
 const stepSeconds = useStorage('demo-step-seconds', 5);
 
 const tags = ref<VideoWallTag[]>([
-  { time: 10, name: 'Intro End' },
-  { time: 25, name: 'Action Start' },
-  { time: 40, name: 'Climax' },
+  { time: 10, name: 'Intro End', color: '#ef4444' },
+  { time: 25, name: 'Action Start', color: '#3b82f6' },
+  { time: 40, name: 'Climax', color: '#10b981' },
 ]);
 
 const showSettings = ref(false);
@@ -86,7 +89,10 @@ const showSettings = ref(false);
       :tags="tags"
       :show-prev-next-chunk="showPrevNextChunk"
       :show-step-skip="showStepSkip"
+      :show-playback-rate="showPlaybackRate"
+      :show-speed-control="showSpeedControl"
       :step-seconds="stepSeconds"
+      :fixed-tile-meta="fixedTileMeta"
     />
 
     <!-- Settings Toggle -->
@@ -199,6 +205,10 @@ const showSettings = ref(false);
           <label>Tile Mute</label>
           <input type="checkbox" v-model="showTileMute" class="w-4 h-4 accent-blue-500" />
         </div>
+        <div class="flex items-center justify-between">
+          <label>Fixed Tile Meta</label>
+          <input type="checkbox" v-model="fixedTileMeta" class="w-4 h-4 accent-blue-500" />
+        </div>
 
         <h4 class="font-bold mt-4 mb-2 text-sm border-b border-gray-700 pb-1">Controls</h4>
 
@@ -209,6 +219,14 @@ const showSettings = ref(false);
         <div class="flex items-center justify-between">
           <label>Step Skip</label>
           <input type="checkbox" v-model="showStepSkip" class="w-4 h-4 accent-blue-500" />
+        </div>
+        <div class="flex items-center justify-between">
+          <label>Playback Rate</label>
+          <input type="checkbox" v-model="showPlaybackRate" class="w-4 h-4 accent-blue-500" />
+        </div>
+        <div class="flex items-center justify-between">
+          <label>Speed Control (Rewind/FF)</label>
+          <input type="checkbox" v-model="showSpeedControl" class="w-4 h-4 accent-blue-500" />
         </div>
         <div class="space-y-1">
           <div class="flex justify-between text-sm text-gray-400">
