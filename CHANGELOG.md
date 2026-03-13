@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.0.2...main
+
+[compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.2...main)
+
+### 🩹 Fixes
+
+- **ci:** Add registry-url to setup-node for npm publish auth ([d81d9fc](https://github.com/huangzida/video-wall-player/commit/d81d9fc))
+
+### ❤️ Contributors
+
+- Huangzida <398926656@qq.com>
+
 ## v0.0.1...main
 
 [compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.1...main)
