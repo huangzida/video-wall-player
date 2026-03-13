@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.0.7...main
+
+[compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.7...main)
+
+### 🩹 Fixes
+
+- Include tailwind styles in library bundle ([18ded0a](https://github.com/huangzida/video-wall-player/commit/18ded0a))
+
+### ❤️ Contributors
+
+- Huangzida <398926656@qq.com>
+
 ## v0.0.6...main
 
 [compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.6...main)
