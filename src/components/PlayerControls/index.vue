@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { toRefs, ref, watch, onUnmounted } from 'vue';
+import { toRefs, ref, watch, onUnmounted, computed } from 'vue';
 import {
   ChevronsLeft,
   ChevronsRight,
@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-vue-next';
 import { formatTime } from '../../utils';
-import type { VideoWallTag } from '../VideoWallPlayer/types';
+import type { VideoWallTag, VideoWallControlSize } from '../VideoWallPlayer/types';
 
 interface Props {
   isPlaying?: boolean;
@@ -33,6 +33,7 @@ interface Props {
   showPrevNextChunk?: boolean;
   showStepSkip?: boolean;
   stepSeconds?: number;
+  controlSize?: VideoWallControlSize;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -51,6 +52,7 @@ const props = withDefaults(defineProps<Props>(), {
   showPrevNextChunk: true,
   showStepSkip: true,
   stepSeconds: 5,
+  controlSize: 'normal',
 });
 
 const emit = defineEmits<{
@@ -96,6 +98,42 @@ const progressBarRef = ref<HTMLDivElement>();
 const volumeSliderRef = ref<HTMLDivElement>();
 const volumeHideTimerRef = ref<any>(null);
 const justDraggedRef = ref(false);
+
+const sizeClasses = computed(() => {
+  switch (props.controlSize) {
+    case 'small':
+      return {
+        container: 'px-4 py-2',
+        icon: 'w-4 h-4',
+        playIcon: 'w-5 h-5',
+        text: 'text-xs',
+        button: 'p-1.5',
+        sliderHeight: 'h-6',
+        tag: 'w-1.5 h-1.5',
+      };
+    case 'large':
+      return {
+        container: 'px-6 py-4',
+        icon: 'w-6 h-6',
+        playIcon: 'w-8 h-8',
+        text: 'text-md',
+        button: 'p-2.5',
+        sliderHeight: 'h-10',
+        tag: 'w-2.5 h-2.5',
+      };
+    case 'normal':
+    default:
+      return {
+        container: 'px-6 py-3',
+        icon: 'w-5 h-5',
+        playIcon: 'w-6 h-6',
+        text: 'text-sm',
+        button: 'p-2',
+        sliderHeight: 'h-8',
+        tag: 'w-2 h-2',
+      };
+  }
+});
 
 const handlePlayPause = () => emit('playPause');
 const handleSpeedDown = () => emit('speedDown');
@@ -208,47 +246,90 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex items-center gap-4 px-6 py-3 text-gray-200 bg-black/80 backdrop-blur-md border-t border-white/10 absolute bottom-0 left-0 right-0 z-50 select-none transition-all duration-300 hover:bg-black/90">
+  <div
+    class="flex items-center gap-4 text-gray-200 bg-black/80 backdrop-blur-md border-t border-white/10 w-full select-none transition-all duration-300 hover:bg-black/90"
+    :class="sizeClasses.container"
+  >
     <!-- Left Controls -->
     <div class="flex items-center gap-1">
-      <div v-if="showPrevNextChunk" class="p-2 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handlePrevChunk" title="Previous Chunk">
-        <ChevronsLeft class="w-5 h-5" />
+      <div
+        v-if="showPrevNextChunk"
+        class="flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400"
+        :class="sizeClasses.button"
+        @click="handlePrevChunk"
+        title="Previous Chunk"
+      >
+        <ChevronsLeft :class="sizeClasses.icon" />
       </div>
       
-      <div v-if="showStepSkip" class="p-2 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleStepBack" :title="`Back ${stepSeconds}s`">
-        <SkipBack class="w-5 h-5" />
+      <div
+        v-if="showStepSkip"
+        class="flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400"
+        :class="sizeClasses.button"
+        @click="handleStepBack"
+        :title="`Back ${stepSeconds}s`"
+      >
+        <SkipBack :class="sizeClasses.icon" />
       </div>
 
-      <div v-if="showSpeedDown" class="p-2 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleSpeedDown" title="Slower">
-        <Rewind class="w-5 h-5" />
+      <div
+        v-if="showSpeedDown"
+        class="flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400"
+        :class="sizeClasses.button"
+        @click="handleSpeedDown"
+        title="Slower"
+      >
+        <Rewind :class="sizeClasses.icon" />
       </div>
       
-      <div class="p-2 flex items-center justify-center cursor-pointer hover:bg-blue-500 hover:text-white rounded-full transition-all active:scale-90 mx-1" @click="handlePlayPause">
-        <Pause v-if="isPlaying" class="w-6 h-6 fill-current" />
-        <Play v-else class="w-6 h-6 fill-current" />
+      <div
+        class="flex items-center justify-center cursor-pointer hover:bg-blue-500 hover:text-white rounded-full transition-all active:scale-90 mx-1"
+        :class="sizeClasses.button"
+        @click="handlePlayPause"
+      >
+        <Pause v-if="isPlaying" class="fill-current" :class="sizeClasses.playIcon" />
+        <Play v-else class="fill-current" :class="sizeClasses.playIcon" />
       </div>
       
-      <div v-if="showSpeedUp" class="p-2 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleSpeedUp" title="Faster">
-        <FastForward class="w-5 h-5" />
+      <div
+        v-if="showSpeedUp"
+        class="flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400"
+        :class="sizeClasses.button"
+        @click="handleSpeedUp"
+        title="Faster"
+      >
+        <FastForward :class="sizeClasses.icon" />
       </div>
 
-      <div v-if="showStepSkip" class="p-2 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleStepForward" :title="`Forward ${stepSeconds}s`">
-        <SkipForward class="w-5 h-5" />
+      <div
+        v-if="showStepSkip"
+        class="flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400"
+        :class="sizeClasses.button"
+        @click="handleStepForward"
+        :title="`Forward ${stepSeconds}s`"
+      >
+        <SkipForward :class="sizeClasses.icon" />
       </div>
 
-      <div v-if="showPrevNextChunk" class="p-2 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleNextChunk" title="Next Chunk">
-        <ChevronsRight class="w-5 h-5" />
+      <div
+        v-if="showPrevNextChunk"
+        class="flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400"
+        :class="sizeClasses.button"
+        @click="handleNextChunk"
+        title="Next Chunk"
+      >
+        <ChevronsRight :class="sizeClasses.icon" />
       </div>
     </div>
 
     <!-- Center Progress -->
     <div class="flex-1 flex items-center gap-4 min-w-0 group/progress">
-      <span class="font-mono text-xs text-gray-400 min-w-[48px] text-right">{{ formatTime(currentTime) }}</span>
+      <span class="font-mono text-gray-400 min-w-[48px] text-right" :class="sizeClasses.text">{{ formatTime(currentTime) }}</span>
       
       <div
         ref="progressBarRef"
-        class="flex-1 h-8 flex items-center cursor-pointer relative group/bar"
-        :class="{ 'cursor-grabbing': isDraggingProgress }"
+        class="flex-1 flex items-center cursor-pointer relative group/bar"
+        :class="[sizeClasses.sliderHeight, { 'cursor-grabbing': isDraggingProgress }]"
         @click="handleProgressTrackClick"
       >
         <!-- Track -->
@@ -270,8 +351,8 @@ onUnmounted(() => {
           <div
             v-for="(tag, index) in tags"
             :key="tag.id || index"
-            class="absolute top-1/2 w-2 h-2 rounded-full -translate-y-1/2 -translate-x-1/2 hover:scale-150 z-10 transition-all cursor-help group/tag"
-            :class="!tag.color ? 'bg-yellow-500 hover:bg-yellow-400' : ''"
+            class="absolute top-1/2 rounded-full -translate-y-1/2 -translate-x-1/2 hover:scale-150 z-10 transition-all cursor-help group/tag"
+            :class="[!tag.color ? 'bg-yellow-500 hover:bg-yellow-400' : '', sizeClasses.tag]"
             :style="{ left: `${(tag.time / duration) * 100}%`, backgroundColor: tag.color }"
             @click.stop="handleTagClick(tag)"
           >
@@ -284,7 +365,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <span class="font-mono text-xs text-gray-500 min-w-[48px]">{{ formatTime(duration) }}</span>
+      <span class="font-mono text-gray-500 min-w-[48px]" :class="sizeClasses.text">{{ formatTime(duration) }}</span>
     </div>
 
     <!-- Right Controls -->
@@ -292,14 +373,14 @@ onUnmounted(() => {
       <!-- Rate -->
       <div v-if="showPlaybackRate" class="relative group/rate">
         <div class="px-3 py-1.5 flex items-center justify-center bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 hover:text-white transition-colors border border-white/5" @click="handleRateClick">
-          <span class="text-xs font-bold tracking-wider">{{ playbackRate }}×</span>
+          <span class="font-bold tracking-wider" :class="sizeClasses.text">{{ playbackRate }}×</span>
         </div>
         <div v-if="showRateList" class="absolute right-0 bottom-full mb-3 min-w-[80px] py-1 bg-[#1a1a1a] border border-white/10 rounded-lg shadow-xl backdrop-blur-md overflow-hidden z-20">
           <div
             v-for="rate in playbackRates"
             :key="rate"
-            class="px-4 py-2 text-xs text-center cursor-pointer transition-colors"
-            :class="rate === playbackRate ? 'bg-blue-500/20 text-blue-400 font-bold' : 'text-gray-400 hover:bg-white/5 hover:text-white'"
+            class="px-4 py-2 text-center cursor-pointer transition-colors"
+            :class="[rate === playbackRate ? 'bg-blue-500/20 text-blue-400 font-bold' : 'text-gray-400 hover:bg-white/5 hover:text-white', sizeClasses.text]"
             @click="handleRateChange(rate)"
           >
             {{ rate }}x
@@ -309,9 +390,13 @@ onUnmounted(() => {
 
       <!-- Volume -->
       <div class="relative flex items-center" @mouseenter="handleVolumeMouseEnter" @mouseleave="handleVolumeMouseLeave">
-        <div class="p-2 flex items-center justify-center rounded-full cursor-pointer hover:bg-white/10 hover:text-white text-gray-400 transition-colors" @click="handleVolumeClick">
-          <VolumeX v-if="isMuted || volume === 0" class="w-5 h-5" />
-          <Volume2 v-else class="w-5 h-5" />
+        <div
+          class="flex items-center justify-center rounded-full cursor-pointer hover:bg-white/10 hover:text-white text-gray-400 transition-colors"
+          :class="sizeClasses.button"
+          @click="handleVolumeClick"
+        >
+          <VolumeX v-if="isMuted || volume === 0" :class="sizeClasses.icon" />
+          <Volume2 v-else :class="sizeClasses.icon" />
         </div>
         
         <!-- Volume Slider (Horizontal expand) -->
@@ -319,7 +404,7 @@ onUnmounted(() => {
           class="overflow-hidden transition-all duration-300 ease-out"
           :class="showVolumeSlider ? 'w-24 opacity-100 ml-2' : 'w-0 opacity-0'"
         >
-           <div class="h-8 flex items-center px-1">
+           <div class="flex items-center px-1" :class="sizeClasses.sliderHeight">
              <div ref="volumeSliderRef" class="w-full h-1 bg-white/20 rounded-full cursor-pointer relative group/vol" @click="handleVolumeChange">
                <div
                  class="absolute top-0 left-0 h-full bg-blue-500 rounded-full"
@@ -338,13 +423,22 @@ onUnmounted(() => {
       <div class="w-px h-6 bg-white/10 mx-1"></div>
 
       <!-- Stop -->
-      <div v-if="showStop" class="p-2 flex items-center justify-center rounded-full cursor-pointer text-gray-400 hover:bg-red-500/20 hover:text-red-500 transition-all active:scale-90" @click="handleStopPlay">
-        <X class="w-5 h-5" />
+      <div
+        v-if="showStop"
+        class="flex items-center justify-center rounded-full cursor-pointer text-gray-400 hover:bg-red-500/20 hover:text-red-500 transition-all active:scale-90"
+        :class="sizeClasses.button"
+        @click="handleStopPlay"
+      >
+        <X :class="sizeClasses.icon" />
       </div>
 
       <!-- Fullscreen -->
-      <div class="p-2 flex items-center justify-center rounded-full cursor-pointer text-gray-400 hover:bg-white/10 hover:text-white transition-all active:scale-90" @click="handleFullscreen">
-        <Maximize class="w-5 h-5" />
+      <div
+        class="flex items-center justify-center rounded-full cursor-pointer text-gray-400 hover:bg-white/10 hover:text-white transition-all active:scale-90"
+        :class="sizeClasses.button"
+        @click="handleFullscreen"
+      >
+        <Maximize :class="sizeClasses.icon" />
       </div>
     </div>
   </div>

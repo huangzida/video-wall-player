@@ -14,3 +14,5 @@ export interface VideoWallResource {
 }
 
 export type VideoWallTheme = 'default' | 'cyberpunk' | 'industrial' | 'minimalist';
+
+export type VideoWallControlSize = 'small' | 'normal' | 'large';

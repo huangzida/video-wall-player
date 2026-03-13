@@ -5,7 +5,7 @@ import { AudioLines, Volume2, VolumeX } from "lucide-vue-next";
 import PlayerControls from "../PlayerControls/index.vue";
 import { useVideoWallLayout } from "../../hooks/useVideoWallLayout";
 import { formatTime, PLAYBACK_RATE_LEVELS } from "../../utils";
-import type { VideoWallResource, VideoWallTag, VideoWallTheme } from "./types";
+import type { VideoWallResource, VideoWallTag, VideoWallTheme, VideoWallControlSize } from "./types";
 
 defineOptions({ name: "VideoWallPlayer" });
 
@@ -21,6 +21,7 @@ const props = withDefaults(
     showControls?: boolean;
     objectFit?: "contain" | "cover" | "fill";
     theme?: VideoWallTheme;
+    controlSize?: VideoWallControlSize;
     draggable?: boolean;
     showTileTitle?: boolean;
     showTileMute?: boolean;
@@ -46,6 +47,7 @@ const props = withDefaults(
     showControls: true,
     objectFit: "contain",
     theme: "default",
+    controlSize: "normal",
     draggable: true,
     showTileTitle: true,
     showTileMute: true,
@@ -545,7 +547,7 @@ defineExpose({
     >
       <div
         ref="containerRef"
-        class="flex flex-1 items-center justify-center overflow-hidden relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gray-900/50 to-black mb-[64px]"
+        class="flex flex-1 items-center justify-center overflow-hidden relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gray-900/50 to-black"
         :style="{ padding: `${videoWallPadding}px` }"
       >
         <div
@@ -686,7 +688,7 @@ defineExpose({
       <!-- Controls -->
       <div
         v-if="showControls"
-        class="absolute bottom-0 left-0 right-0 z-50 pointer-events-auto"
+        class="relative z-50 pointer-events-auto"
       >
         <PlayerControls
           :is-playing="isPlaying"
@@ -704,6 +706,7 @@ defineExpose({
           :show-speed-down="showSpeedControl"
           :show-speed-up="showSpeedControl"
           :step-seconds="stepSeconds"
+          :control-size="controlSize"
           @speed-down="handleSpeedDown"
           @play-pause="handlePlayPause"
           @speed-up="handleSpeedUp"

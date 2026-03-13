@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue';
 import { useStorage } from '@vueuse/core';
 import { VideoWallPlayer } from '../src/index';
-import type { VideoWallTag, VideoWallTheme } from '../src/components/VideoWallPlayer/types';
+import type { VideoWallTag, VideoWallTheme, VideoWallControlSize } from '../src/components/VideoWallPlayer/types';
 
 // const testUrl = '//sf1-cdn-tos.huoshanstatic.com/obj/media-fe/xgplayer_doc_video/mp4/xgplayer-demo-360p.mp4';
 // const testDuration = 90;
@@ -59,6 +59,7 @@ const showPlaybackRate = useStorage('demo-show-playback-rate', true);
 const showSpeedControl = useStorage('demo-show-speed-control', true);
 const fixedTileMeta = useStorage('demo-fixed-tile-meta', true);
 const stepSeconds = useStorage('demo-step-seconds', 5);
+const controlSize = useStorage<VideoWallControlSize>('demo-control-size', 'normal');
 const sidebarWidth = useStorage('demo-sidebar-width', 280);
 const videoWallPadding = useStorage('demo-video-wall-padding', 10);
 
@@ -95,6 +96,7 @@ const showSettings = ref(false);
       :show-speed-control="showSpeedControl"
       :step-seconds="stepSeconds"
       :fixed-tile-meta="fixedTileMeta"
+      :control-size="controlSize"
       :sidebar-width="sidebarWidth"
       :video-wall-padding="videoWallPadding"
     />
@@ -110,7 +112,7 @@ const showSettings = ref(false);
     <!-- Settings Panel -->
     <div
       v-if="showSettings"
-      class="absolute top-16 right-4 z-50 bg-gray-900/90 text-white p-4 rounded-lg shadow-xl w-72 backdrop-blur-sm border border-gray-700"
+      class="absolute top-16 right-4 z-50 bg-gray-900/90 text-white p-4 rounded-lg shadow-xl w-72 backdrop-blur-sm border border-gray-700 max-h-[calc(100vh-5rem)] overflow-y-auto custom-scrollbar"
     >
       <h3 class="font-bold mb-4 text-lg border-b border-gray-700 pb-2">Configuration</h3>
 
@@ -244,6 +246,18 @@ const showSettings = ref(false);
             max="30"
             class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
           />
+        </div>
+
+        <div class="space-y-1">
+          <label class="text-sm text-gray-400 block">Control Size</label>
+          <select
+            v-model="controlSize"
+            class="w-full bg-gray-800 border border-gray-700 rounded p-2 text-sm focus:outline-none focus:border-blue-500"
+          >
+            <option value="small">Small</option>
+            <option value="normal">Normal</option>
+            <option value="large">Large</option>
+          </select>
         </div>
 
         <h4 class="font-bold mt-4 mb-2 text-sm border-b border-gray-700 pb-1">Layout</h4>

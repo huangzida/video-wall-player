@@ -79,6 +79,7 @@ const resources = [
 | `showPlaybackRate` | `boolean` | `true` | Whether to show playback rate multiplier button. |
 | `stepSeconds` | `number` | `5` | Seconds to skip when using step buttons. |
 | `fixedTileMeta` | `boolean` | `true` | Whether tile meta (title, mute) is always visible (true) or hover-only (false). |
+| `controlSize` | `'small' \| 'normal' \| 'large'` | `'normal'` | Size of the bottom control bar (icons and text). |
 | `sidebarWidth` | `number` | `280` | Width of the sidebar in pixels. |
 | `videoWallPadding` | `number` | `10` | Padding inside the right-side video wall area in pixels. |
 | `tags` | `VideoWallTag[]` | `[]` | List of timeline tags. |
