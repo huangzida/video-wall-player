@@ -32,7 +32,6 @@ const props = withDefaults(defineProps<{
   stepSeconds?: number;
   fixedTileMeta?: boolean;
   sidebarWidth?: number;
-  wallPadding?: number;
   videoWallPadding?: number;
 }>(), {
   resources: () => [],
@@ -57,8 +56,7 @@ const props = withDefaults(defineProps<{
   stepSeconds: 5,
   fixedTileMeta: true,
   sidebarWidth: 280,
-  wallPadding: 10,
-  videoWallPadding: 0,
+  videoWallPadding: 10,
 });
 
 const emit = defineEmits<{
@@ -453,7 +451,6 @@ defineExpose({
   <div
     class="flex w-full h-full min-h-[500px] gap-4 text-gray-100 font-sans transition-colors duration-300 vwp-bg-main vwp-font"
     :class="[`theme-${theme}`]"
-    :style="{ padding: `${wallPadding}px` }"
   >
     <!-- Sidebar -->
     <div

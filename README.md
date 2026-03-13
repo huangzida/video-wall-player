@@ -80,8 +80,7 @@ const resources = [
 | `stepSeconds` | `number` | `5` | Seconds to skip when using step buttons. |
 | `fixedTileMeta` | `boolean` | `true` | Whether tile meta (title, mute) is always visible (true) or hover-only (false). |
 | `sidebarWidth` | `number` | `280` | Width of the sidebar in pixels. |
-| `wallPadding` | `number` | `10` | Padding around the video wall container in pixels. |
-| `videoWallPadding` | `number` | `0` | Padding inside the right-side video wall area in pixels. |
+| `videoWallPadding` | `number` | `10` | Padding inside the right-side video wall area in pixels. |
 | `tags` | `VideoWallTag[]` | `[]` | List of timeline tags. |
 
 ### VideoWallResource Interface
