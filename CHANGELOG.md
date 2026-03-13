@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.0.3...main
+
+[compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.3...main)
+
+### 🏡 Chore
+
+- 添加 .nvmrc 文件以指定 Node.js 版本 ([0e4675c](https://github.com/huangzida/video-wall-player/commit/0e4675c))
+
+### ❤️ Contributors
+
+- Huangzida <398926656@qq.com>
+
 ## v0.0.3...v0.0.3
 
 [compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.3...v0.0.3)
