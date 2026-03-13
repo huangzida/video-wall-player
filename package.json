@@ -15,7 +15,7 @@
     "build": "vite build -c vite.config.lib.ts",
     "bump": "bumpp",
     "changelog": "changelogen --output CHANGELOG.md",
-    "release": "pnpm build && pnpm changelog && git add CHANGELOG.md && pnpm bump --commit \"chore: release v%s\" && git push --follow-tags"
+    "release": "pnpm build && pnpm changelog && pnpm bump --all --commit \"chore: release v%s\" && git push --follow-tags"
   },
   "keywords": [
     "vue",

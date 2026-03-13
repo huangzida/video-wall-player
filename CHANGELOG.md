@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.0.5...main
+
+[compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.5...main)
+
+### 🏡 Chore
+
+- Ensure version bump creates a commit ([b371d37](https://github.com/huangzida/video-wall-player/commit/b371d37))
+
+### ❤️ Contributors
+
+- Huangzida <398926656@qq.com>
+
 ## v0.0.3...main
 
 [compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.3...main)
