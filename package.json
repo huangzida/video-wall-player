@@ -1,6 +1,6 @@
 {
   "name": "video-wall-player",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A Vue 3 video wall player component with multi-stream synchronization",
   "main": "./dist/lib/index.js",
   "module": "./dist/es/index.js",
@@ -55,5 +55,5 @@
   "engines": {
     "node": ">=16.0.0"
   },
-  "packageManager": "pnpm@8.15.4"
+  "packageManager": "pnpm@10.12.4"
 }
