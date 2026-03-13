@@ -15,13 +15,7 @@ import {
   X,
 } from 'lucide-vue-next';
 import { formatTime } from '../../utils';
-
-export interface Tag {
-  id: string | number;
-  time: number;
-  text: string;
-  color?: string;
-}
+import type { VideoWallTag } from '../VideoWallPlayer/types';
 
 interface Props {
   isPlaying?: boolean;
@@ -31,7 +25,7 @@ interface Props {
   playbackRate?: number;
   volume?: number;
   isMuted?: boolean;
-  tags?: Tag[];
+  tags?: VideoWallTag[];
   showSpeedDown?: boolean;
   showSpeedUp?: boolean;
   showPlaybackRate?: boolean;
@@ -205,7 +199,7 @@ const handleVolumeChange = (e: MouseEvent) => {
 };
 
 const handleStopPlay = () => emit('stop');
-const handleTagClick = (tag: Tag) => emit('seek', tag.time);
+const handleTagClick = (tag: VideoWallTag) => emit('seek', tag.time);
 const handleFullscreen = () => emit('fullscreen');
 
 onUnmounted(() => {
@@ -274,8 +268,8 @@ onUnmounted(() => {
           
           <!-- Tags -->
           <div
-            v-for="tag in tags"
-            :key="tag.id"
+            v-for="(tag, index) in tags"
+            :key="tag.id || index"
             class="absolute top-1/2 w-2 h-2 rounded-full -translate-y-1/2 -translate-x-1/2 hover:scale-150 z-10 transition-all cursor-help group/tag"
             :class="!tag.color ? 'bg-yellow-500 hover:bg-yellow-400' : ''"
             :style="{ left: `${(tag.time / duration) * 100}%`, backgroundColor: tag.color }"

@@ -1,4 +1,5 @@
 export interface VideoWallTag {
+  id?: string | number;
   time: number;
   name: string;
   color?: string;

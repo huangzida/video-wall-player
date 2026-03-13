@@ -477,6 +477,9 @@ const handleNextChunk = () => {
     void switchChunk(activeChunkIndex.value + 1, 0, isPlaying.value);
   }
 };
+const handleSegmentClick = (index: number) => {
+  void switchChunk(index, 0, true);
+};
 
 defineExpose({
   play: playAllVideos,
