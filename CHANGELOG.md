@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.0.9...main
+
+[compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.9...main)
+
+### 🩹 Fixes
+
+- **VideoWallPlayer:** 修复视频墙项目尺寸计算和演示资源生成 ([04d47c6](https://github.com/huangzida/video-wall-player/commit/04d47c6))
+
+### ❤️ Contributors
+
+- Huangzida <398926656@qq.com>
+
 ## v0.0.8...main
 
 [compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.8...main)
