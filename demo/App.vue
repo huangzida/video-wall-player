@@ -59,6 +59,8 @@ const showPlaybackRate = useStorage('demo-show-playback-rate', true);
 const showSpeedControl = useStorage('demo-show-speed-control', true);
 const fixedTileMeta = useStorage('demo-fixed-tile-meta', true);
 const stepSeconds = useStorage('demo-step-seconds', 5);
+const sidebarWidth = useStorage('demo-sidebar-width', 280);
+const wallPadding = useStorage('demo-wall-padding', 10);
 
 const tags = ref<VideoWallTag[]>([
   { time: 10, name: 'Intro End', color: '#ef4444' },
@@ -93,6 +95,8 @@ const showSettings = ref(false);
       :show-speed-control="showSpeedControl"
       :step-seconds="stepSeconds"
       :fixed-tile-meta="fixedTileMeta"
+      :sidebar-width="sidebarWidth"
+      :wall-padding="wallPadding"
     />
 
     <!-- Settings Toggle -->
@@ -238,6 +242,34 @@ const showSettings = ref(false);
             v-model.number="stepSeconds"
             min="1"
             max="30"
+            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+          />
+        </div>
+
+        <h4 class="font-bold mt-4 mb-2 text-sm border-b border-gray-700 pb-1">Layout</h4>
+        <div class="space-y-1">
+          <div class="flex justify-between text-sm text-gray-400">
+            <label>Sidebar Width</label>
+            <span>{{ sidebarWidth }}px</span>
+          </div>
+          <input
+            type="range"
+            v-model.number="sidebarWidth"
+            min="200"
+            max="500"
+            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+          />
+        </div>
+        <div class="space-y-1">
+          <div class="flex justify-between text-sm text-gray-400">
+            <label>Wall Padding</label>
+            <span>{{ wallPadding }}px</span>
+          </div>
+          <input
+            type="range"
+            v-model.number="wallPadding"
+            min="0"
+            max="50"
             class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
           />
         </div>

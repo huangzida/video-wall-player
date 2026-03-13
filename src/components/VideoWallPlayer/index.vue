@@ -31,6 +31,8 @@ const props = withDefaults(defineProps<{
   showSpeedControl?: boolean;
   stepSeconds?: number;
   fixedTileMeta?: boolean;
+  sidebarWidth?: number;
+  wallPadding?: number;
 }>(), {
   resources: () => [],
   title: '',
@@ -53,6 +55,8 @@ const props = withDefaults(defineProps<{
   showSpeedControl: true,
   stepSeconds: 5,
   fixedTileMeta: true,
+  sidebarWidth: 280,
+  wallPadding: 10,
 });
 
 const emit = defineEmits<{
@@ -445,13 +449,15 @@ defineExpose({
 
 <template>
   <div
-    class="flex w-full h-full min-h-[500px] gap-4 p-4 text-gray-100 font-sans transition-colors duration-300 vwp-bg-main vwp-font"
+    class="flex w-full h-full min-h-[500px] gap-4 text-gray-100 font-sans transition-colors duration-300 vwp-bg-main vwp-font"
     :class="[`theme-${theme}`]"
+    :style="{ padding: `${wallPadding}px` }"
   >
     <!-- Sidebar -->
     <div
       v-if="showSidebar"
-      class="w-[280px] flex flex-col overflow-hidden backdrop-blur-sm transition-all duration-300 vwp-bg-sidebar vwp-border border vwp-radius vwp-shadow"
+      class="flex flex-col overflow-hidden backdrop-blur-sm transition-all duration-300 vwp-bg-sidebar vwp-border border vwp-radius vwp-shadow"
+      :style="{ width: `${sidebarWidth}px` }"
     >
       <div class="px-4 py-3 border-b vwp-border flex justify-between items-center bg-white/[0.02]">
         <span class="text-sm font-semibold tracking-wide uppercase vwp-text-primary">{{ title || 'Segments' }}</span>
@@ -477,9 +483,9 @@ defineExpose({
     <!-- Main Wall -->
     <div
       ref="wallRef"
-      class="relative flex flex-1 flex-col overflow-hidden vwp-bg-main vwp-shadow vwp-border border ring-1 ring-white/5 vwp-radius"
+      class="relative flex flex-1 flex-col overflow-hidden vwp-bg-main vwp-shadow vwp-border border ring-1 ring-white/5 vwp-radius group/wall"
     >
-      <div ref="containerRef" class="flex flex-1 items-center justify-center overflow-hidden relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gray-900/50 to-black">
+      <div ref="containerRef" class="flex flex-1 items-center justify-center overflow-hidden relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gray-900/50 to-black pb-[60px]">
         <div :style="gridStyle" class="mx-auto my-auto transition-all duration-500 ease-out">
           <div
             v-for="item in localResources"
@@ -566,7 +572,7 @@ defineExpose({
       </div>
 
       <!-- Controls -->
-      <div v-if="showControls" class="absolute bottom-0 left-0 right-0 z-50">
+      <div v-if="showControls" class="absolute bottom-0 left-0 right-0 z-50 pointer-events-auto">
         <PlayerControls
           :is-playing="isPlaying"
           :current-time="currentTime"

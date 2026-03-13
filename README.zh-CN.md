@@ -79,6 +79,8 @@ const resources = [
 | `showPlaybackRate` | `boolean` | `true` | 是否显示倍速切换按钮（如 1x）。 |
 | `stepSeconds` | `number` | `5` | 快退/快进的步进秒数。 |
 | `fixedTileMeta` | `boolean` | `true` | 视频格子的标题和静音按钮是固定显示 (true) 还是悬停显示 (false)。 |
+| `sidebarWidth` | `number` | `280` | 侧边栏的宽度（像素）。 |
+| `wallPadding` | `number` | `10` | 视频墙容器的内边距（像素）。 |
 | `tags` | `VideoWallTag[]` | `[]` | 时间轴打点列表。 |
 
 ### VideoWallResource 类型定义

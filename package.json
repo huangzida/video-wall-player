@@ -1,6 +1,6 @@
 {
   "name": "video-wall-player",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A Vue 3 video wall player component with multi-stream synchronization",
   "main": "./dist/lib/index.js",
   "module": "./dist/es/index.js",
@@ -19,8 +19,12 @@
   },
   "keywords": [
     "vue",
+    "video",
+    "player",
     "video-player",
     "video-wall",
+    "multi-stream",
+    "wall-player",
     "sync-player"
   ],
   "author": "huangzida <398926656@qq.com> + https://huangzida.github.io/video-wall-player/",

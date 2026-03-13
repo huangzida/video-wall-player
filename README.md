@@ -79,6 +79,8 @@ const resources = [
 | `showPlaybackRate` | `boolean` | `true` | Whether to show playback rate multiplier button. |
 | `stepSeconds` | `number` | `5` | Seconds to skip when using step buttons. |
 | `fixedTileMeta` | `boolean` | `true` | Whether tile meta (title, mute) is always visible (true) or hover-only (false). |
+| `sidebarWidth` | `number` | `280` | Width of the sidebar in pixels. |
+| `wallPadding` | `number` | `10` | Padding around the video wall container in pixels. |
 | `tags` | `VideoWallTag[]` | `[]` | List of timeline tags. |
 
 ### VideoWallResource Interface
