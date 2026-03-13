@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.0.8...main
+
+[compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.8...main)
+
+### 🚀 Enhancements
+
+- **controls:** 添加控制栏尺寸配置选项 ([a9a1bc0](https://github.com/huangzida/video-wall-player/commit/a9a1bc0))
+
+### 📖 Documentation
+
+- 更新中英文README文档 ([8175359](https://github.com/huangzida/video-wall-player/commit/8175359))
+
+### ❤️ Contributors
+
+- Huangzida <398926656@qq.com>
+
 ## v0.0.7...main
 
 [compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.7...main)
