@@ -4,104 +4,79 @@ import { useResizeObserver } from '@vueuse/core';
 export interface UseVideoWallOptions {
   aspectRatio?: number;
   gap?: number;
-  width?: number;
-  height?: number;
 }
 
 export function useVideoWallLayout(
-  itemCountRes: Ref<number> | number,
+  itemCount: Ref<number> | number,
   options: Ref<UseVideoWallOptions> | UseVideoWallOptions = {},
 ) {
   const containerRef = ref<HTMLElement | null>(null);
-  const containerWidth = ref(0);
-  const containerHeight = ref(0);
-
-  // Initialize width/height from options if provided (non-reactive initial value)
-  const initialOptions = unref(options);
-  if (initialOptions.width) containerWidth.value = initialOptions.width;
-  if (initialOptions.height) containerHeight.value = initialOptions.height;
+  const width = ref(0);
+  const height = ref(0);
 
   useResizeObserver(containerRef, (entries) => {
     const entry = entries[0];
     if (entry) {
-      const { width, height } = entry.contentRect;
-      containerWidth.value = width;
-      containerHeight.value = height;
+      width.value = entry.contentRect.width;
+      height.value = entry.contentRect.height;
     }
   });
 
   const layout = computed(() => {
-    const n = unref(itemCountRes);
-    const w = containerWidth.value;
-    const h = containerHeight.value;
+    const count = unref(itemCount);
+    const containerW = width.value;
+    const containerH = height.value;
     
-    // Unwrap options to get latest values
-    const currentOptions = unref(options);
-    const aspectRatio = currentOptions.aspectRatio ?? (16 / 9);
-    const gap = currentOptions.gap ?? 0;
+    const opts = unref(options);
+    const aspectRatio = opts.aspectRatio ?? (16 / 9);
+    const gap = opts.gap ?? 0;
 
-    if (n <= 0 || w <= 0 || h <= 0) {
-      return { cols: 1, itemHeight: 0, itemWidth: 0, rows: 1 };
+    if (count <= 0 || containerW <= 0 || containerH <= 0) {
+      return { cols: 1, rows: 1, itemWidth: 0, itemHeight: 0 };
     }
 
-    let bestW = 0;
-    let bestH = 0;
-    let bestCols = 1;
-    let bestRows = 1;
-    let bestScore = 0;
+    let bestLayout = { cols: 1, rows: 1, itemWidth: 0, itemHeight: 0, area: 0 };
 
-    // Iterate through possible column counts to find best layout
-    for (let c = 1; c <= n; c++) {
-      const r = Math.ceil(n / c);
+    // Try different column counts from 1 to count
+    for (let cols = 1; cols <= count; cols++) {
+      const rows = Math.ceil(count / cols);
       
-      // Calculate available space for items after subtracting gaps
-      // Gap logic: (cols - 1) gaps horizontally, (rows - 1) gaps vertically
-      const totalGapW = Math.max(0, c - 1) * gap;
-      const totalGapH = Math.max(0, r - 1) * gap;
+      // Calculate available space removing gaps
+      const totalGapX = Math.max(0, cols - 1) * gap;
+      const totalGapY = Math.max(0, rows - 1) * gap;
       
-      const availableW = w - totalGapW;
-      const availableH = h - totalGapH;
-
+      const availableW = containerW - totalGapX;
+      const availableH = containerH - totalGapY;
+      
       if (availableW <= 0 || availableH <= 0) continue;
 
-      const slotW = availableW / c;
-      const slotH = availableH / r;
+      // Calculate max possible item dimensions based on grid slots
+      const maxItemW = availableW / cols;
+      const maxItemH = availableH / rows;
 
-      let itemW;
-      let itemH;
+      // Fit item maintaining aspect ratio
+      let itemW = maxItemW;
+      let itemH = itemW / aspectRatio;
 
-      // Fit item into slot maintaining aspect ratio
-      if (slotW / slotH > aspectRatio) {
-        // Slot is wider than item, height is the constraint
-        itemH = slotH;
-        itemW = slotH * aspectRatio;
-      } else {
-        // Slot is taller than item, width is the constraint
-        itemW = slotW;
-        itemH = slotW / aspectRatio;
+      if (itemH > maxItemH) {
+        itemH = maxItemH;
+        itemW = itemH * aspectRatio;
       }
 
-      // Score based on total area occupied
-      // Weight optimization: prefer layouts where cols >= rows (landscape-ish)
-      const area = itemW * itemH * n;
-      // const score = area * (c >= r ? 1.05 : 1); // Slight preference for wider layouts
-      // Simply maximizing item width usually works well for visibility
-      const score = itemW * (c >= r ? 1.1 : 1);
+      const area = itemW * itemH; // Maximize individual item size
 
-      if (score > bestScore) {
-        bestScore = score;
-        bestW = itemW;
-        bestH = itemH;
-        bestCols = c;
-        bestRows = r;
+      // Prefer layouts that are more square-ish or match aspect ratio better if areas are close
+      // But primary goal is maximizing size
+      if (area > bestLayout.area) {
+        bestLayout = { cols, rows, itemWidth: itemW, itemHeight: itemH, area };
       }
     }
 
     return {
-      cols: bestCols,
-      itemHeight: bestH,
-      itemWidth: bestW,
-      rows: bestRows,
+      cols: bestLayout.cols,
+      rows: bestLayout.rows,
+      itemWidth: bestLayout.itemWidth,
+      itemHeight: bestLayout.itemHeight,
     };
   });
 

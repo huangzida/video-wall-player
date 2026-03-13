@@ -136,8 +136,8 @@ const gridStyle = computed(() => ({
 }));
 
 const itemStyle = computed(() => ({
-  width: `${layout.value.itemWidth}px`,
-  height: `${layout.value.itemHeight}px`,
+  width: "100%",
+  height: "100%",
 }));
 
 const { toggle: toggleFullscreen } = useFullscreen(wallRef);

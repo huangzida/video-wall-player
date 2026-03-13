@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { useStorage } from '@vueuse/core';
 import { VideoWallPlayer } from '../src/index';
 import type { VideoWallTag, VideoWallTheme, VideoWallControlSize } from '../src/components/VideoWallPlayer/types';
@@ -10,36 +10,15 @@ const testUrl = 'https://media.w3.org/2010/05/sintel/trailer.mp4';
 const testDuration = 52;
 const testPoster = 'https://media.w3.org/2010/05/sintel/poster.png';
 
-const resources = ref([
-  {
-    id: 'res-1',
-    name: 'Stream 1',
+const resources = computed(() => {
+  return Array.from({ length: videoCount.value }, (_, i) => ({
+    id: `res-${i + 1}`,
+    name: `Stream ${i + 1}`,
     chunkUrls: [testUrl, testUrl],
     durations: [testDuration, testDuration],
     poster: testPoster,
-  },
-  {
-    id: 'res-2',
-    name: 'Stream 2',
-    chunkUrls: [testUrl, testUrl],
-    durations: [testDuration, testDuration],
-    poster: testPoster,
-  },
-  {
-    id: 'res-3',
-    name: 'Stream 3',
-    chunkUrls: [testUrl, testUrl],
-    durations: [testDuration, testDuration],
-    poster: testPoster,
-  },
-  {
-    id: 'res-4',
-    name: 'Stream 4',
-    chunkUrls: [testUrl, testUrl],
-    durations: [testDuration, testDuration],
-    poster: testPoster,
-  },
-]);
+  }));
+});
 
 const autoplay = useStorage('demo-autoplay', false);
 const muted = useStorage('demo-muted', false);
@@ -62,6 +41,7 @@ const stepSeconds = useStorage('demo-step-seconds', 5);
 const controlSize = useStorage<VideoWallControlSize>('demo-control-size', 'normal');
 const sidebarWidth = useStorage('demo-sidebar-width', 280);
 const videoWallPadding = useStorage('demo-video-wall-padding', 10);
+const videoCount = useStorage('demo-video-count', 4);
 
 const tags = ref<VideoWallTag[]>([
   { time: 10, name: 'Intro End', color: '#ef4444' },
@@ -135,6 +115,20 @@ const showSettings = ref(false);
         <div class="flex items-center justify-between">
           <label>Show Controls</label>
           <input type="checkbox" v-model="showControls" class="w-4 h-4 accent-blue-500" />
+        </div>
+
+        <div class="space-y-1">
+          <div class="flex justify-between text-sm text-gray-400">
+            <label>Video Count</label>
+            <span>{{ videoCount }}</span>
+          </div>
+          <input
+            type="range"
+            v-model.number="videoCount"
+            min="1"
+            max="25"
+            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+          />
         </div>
 
         <div class="space-y-1">
