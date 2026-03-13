@@ -1,63 +1,66 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch, onMounted } from 'vue';
-import { useFullscreen } from '@vueuse/core';
-import { AudioLines, Volume2, VolumeX } from 'lucide-vue-next';
-import PlayerControls from '../PlayerControls/index.vue';
-import { useVideoWallLayout } from '../../hooks/useVideoWallLayout';
-import { formatTime, PLAYBACK_RATE_LEVELS } from '../../utils';
-import type { VideoWallResource, VideoWallTag, VideoWallTheme } from './types';
+import { computed, nextTick, ref, watch, onMounted } from "vue";
+import { useFullscreen } from "@vueuse/core";
+import { AudioLines, Volume2, VolumeX } from "lucide-vue-next";
+import PlayerControls from "../PlayerControls/index.vue";
+import { useVideoWallLayout } from "../../hooks/useVideoWallLayout";
+import { formatTime, PLAYBACK_RATE_LEVELS } from "../../utils";
+import type { VideoWallResource, VideoWallTag, VideoWallTheme } from "./types";
 
-defineOptions({ name: 'VideoWallPlayer' });
+defineOptions({ name: "VideoWallPlayer" });
 
-const props = withDefaults(defineProps<{
-  resources: VideoWallResource[];
-  title?: string;
-  autoplay?: boolean;
-  muted?: boolean;
-  loop?: boolean;
-  aspectRatio?: number;
-  gap?: number;
-  showControls?: boolean;
-  objectFit?: 'contain' | 'cover' | 'fill';
-  theme?: VideoWallTheme;
-  draggable?: boolean;
-  showTileTitle?: boolean;
-  showTileMute?: boolean;
-  showSidebar?: boolean;
-  tags?: VideoWallTag[];
-  showPrevNextChunk?: boolean;
-  showStepSkip?: boolean;
-  showPlaybackRate?: boolean;
-  showSpeedControl?: boolean;
-  stepSeconds?: number;
-  fixedTileMeta?: boolean;
-  sidebarWidth?: number;
-  videoWallPadding?: number;
-}>(), {
-  resources: () => [],
-  title: '',
-  autoplay: false,
-  muted: false,
-  loop: false,
-  aspectRatio: 16 / 9,
-  gap: 8,
-  showControls: true,
-  objectFit: 'contain',
-  theme: 'default',
-  draggable: true,
-  showTileTitle: true,
-  showTileMute: true,
-  showSidebar: true,
-  tags: () => [],
-  showPrevNextChunk: true,
-  showStepSkip: true,
-  showPlaybackRate: true,
-  showSpeedControl: true,
-  stepSeconds: 5,
-  fixedTileMeta: true,
-  sidebarWidth: 280,
-  videoWallPadding: 10,
-});
+const props = withDefaults(
+  defineProps<{
+    resources: VideoWallResource[];
+    title?: string;
+    autoplay?: boolean;
+    muted?: boolean;
+    loop?: boolean;
+    aspectRatio?: number;
+    gap?: number;
+    showControls?: boolean;
+    objectFit?: "contain" | "cover" | "fill";
+    theme?: VideoWallTheme;
+    draggable?: boolean;
+    showTileTitle?: boolean;
+    showTileMute?: boolean;
+    showSidebar?: boolean;
+    tags?: VideoWallTag[];
+    showPrevNextChunk?: boolean;
+    showStepSkip?: boolean;
+    showPlaybackRate?: boolean;
+    showSpeedControl?: boolean;
+    stepSeconds?: number;
+    fixedTileMeta?: boolean;
+    sidebarWidth?: number;
+    videoWallPadding?: number;
+  }>(),
+  {
+    resources: () => [],
+    title: "",
+    autoplay: false,
+    muted: false,
+    loop: false,
+    aspectRatio: 16 / 9,
+    gap: 8,
+    showControls: true,
+    objectFit: "contain",
+    theme: "default",
+    draggable: true,
+    showTileTitle: true,
+    showTileMute: true,
+    showSidebar: true,
+    tags: () => [],
+    showPrevNextChunk: true,
+    showStepSkip: true,
+    showPlaybackRate: true,
+    showSpeedControl: true,
+    stepSeconds: 5,
+    fixedTileMeta: true,
+    sidebarWidth: 280,
+    videoWallPadding: 10,
+  }
+);
 
 const emit = defineEmits<{
   error: [message: string];
@@ -79,24 +82,28 @@ const itemCount = computed(() => props.resources.length);
 const showPerTileMeta = computed(() => itemCount.value > 1);
 const canReorderWall = computed(() => itemCount.value > 1);
 
-const primaryResourceId = ref('');
-const draggingId = ref('');
-const dragOverId = ref('');
+const primaryResourceId = ref("");
+const draggingId = ref("");
+const dragOverId = ref("");
 
 // Local copy of resources to support reordering
 const localResources = ref<VideoWallResource[]>([]);
 
-watch(() => props.resources, (newResources) => {
-  localResources.value = [...newResources];
-  
-  if (newResources.length > 0) {
-    if (props.muted) {
-      newResources.forEach((item) => {
-        individualMutedStates.value[item.id] = true;
-      });
+watch(
+  () => props.resources,
+  (newResources) => {
+    localResources.value = [...newResources];
+
+    if (newResources.length > 0) {
+      if (props.muted) {
+        newResources.forEach((item) => {
+          individualMutedStates.value[item.id] = true;
+        });
+      }
     }
-  }
-}, { immediate: true, deep: true });
+  },
+  { immediate: true, deep: true }
+);
 
 onMounted(() => {
   if (props.autoplay && localResources.value.length > 0) {
@@ -107,20 +114,23 @@ onMounted(() => {
   }
 });
 
-const { containerRef, layout } = useVideoWallLayout(itemCount, computed(() => ({
-  aspectRatio: props.aspectRatio,
-  gap: props.gap,
-})));
+const { containerRef, layout } = useVideoWallLayout(
+  itemCount,
+  computed(() => ({
+    aspectRatio: props.aspectRatio,
+    gap: props.gap,
+  }))
+);
 
 const gridStyle = computed(() => ({
-  display: 'grid',
+  display: "grid",
   gridTemplateColumns: `repeat(${layout.value.cols}, ${layout.value.itemWidth}px)`,
   gridTemplateRows: `repeat(${layout.value.rows}, ${layout.value.itemHeight}px)`,
   gap: `${props.gap}px`,
-  justifyContent: 'center',
-  alignContent: 'center',
-  width: '100%',
-  height: '100%',
+  justifyContent: "center",
+  alignContent: "center",
+  width: "100%",
+  height: "100%",
 }));
 
 const itemStyle = computed(() => ({
@@ -135,7 +145,7 @@ const primaryResource = computed(() => localResources.value[0]);
 const segmentDurations = computed(() => primaryResource.value?.durations || []);
 
 const duration = computed(() =>
-  segmentDurations.value.reduce((sum, item) => sum + Math.max(0, item || 0), 0),
+  segmentDurations.value.reduce((sum, item) => sum + Math.max(0, item || 0), 0)
 );
 
 const segmentStarts = computed(() => {
@@ -149,7 +159,7 @@ const segmentStarts = computed(() => {
 });
 
 const primaryId = computed(
-  () => primaryResourceId.value || localResources.value[0]?.id || '',
+  () => primaryResourceId.value || localResources.value[0]?.id || ""
 );
 
 const isMuted = computed(() => {
@@ -160,16 +170,16 @@ const isMuted = computed(() => {
 
 const segmentList = computed(() => {
   if (!primaryResource.value) return [];
-  
+
   const total = primaryResource.value.chunkUrls.length;
 
   return Array.from({ length: total }, (_, index) => {
     const chunkNo = index + 1;
-    const url = primaryResource.value!.chunkUrls[index] || '';
+    const url = primaryResource.value!.chunkUrls[index] || "";
     // Infer suffix from URL
     const match = url.match(/\.([0-9a-z]+)(?:[?#]|$)/i);
-    const suffix = match ? `.${match[1]}` : '';
-    
+    const suffix = match ? `.${match[1]}` : "";
+
     return {
       index,
       name: `${chunkNo}${suffix}`,
@@ -180,8 +190,8 @@ const segmentList = computed(() => {
 
 const isAudioChunk = computed(() => {
   if (!primaryResource.value) return false;
-  const url = primaryResource.value.chunkUrls[activeChunkIndex.value] || '';
-  return url.toLowerCase().includes('.wav');
+  const url = primaryResource.value.chunkUrls[activeChunkIndex.value] || "";
+  return url.toLowerCase().includes(".wav");
 });
 
 function setMediaRef(id: string, el: HTMLMediaElement | null) {
@@ -196,15 +206,15 @@ watch(
   localResources,
   (next) => {
     if (next.length === 0) {
-      primaryResourceId.value = '';
+      primaryResourceId.value = "";
       return;
     }
     const hasPrimary = next.some((item) => item.id === primaryResourceId.value);
     if (!hasPrimary) {
-      primaryResourceId.value = next[0]?.id || '';
+      primaryResourceId.value = next[0]?.id || "";
     }
   },
-  { deep: true },
+  { deep: true }
 );
 
 // Drag and Drop Logic
@@ -214,34 +224,46 @@ function handleTileDragStart(event: DragEvent, id: string) {
     return;
   }
   draggingId.value = id;
-  dragOverId.value = '';
+  dragOverId.value = "";
   if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', id);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", id);
   }
 }
 
 function handleTileDragOver(event: DragEvent, targetId: string) {
-  if (!canReorderWall.value || !draggingId.value || draggingId.value === targetId) {
+  if (
+    !canReorderWall.value ||
+    !draggingId.value ||
+    draggingId.value === targetId
+  ) {
     return;
   }
   event.preventDefault();
   if (event.dataTransfer) {
-    event.dataTransfer.dropEffect = 'move';
+    event.dataTransfer.dropEffect = "move";
   }
   dragOverId.value = targetId;
 }
 
 function handleTileDrop(event: DragEvent, targetId: string) {
-  if (!canReorderWall.value || !draggingId.value || draggingId.value === targetId) {
+  if (
+    !canReorderWall.value ||
+    !draggingId.value ||
+    draggingId.value === targetId
+  ) {
     return;
   }
   event.preventDefault();
-  const sourceIndex = localResources.value.findIndex((item) => item.id === draggingId.value);
-  const targetIndex = localResources.value.findIndex((item) => item.id === targetId);
+  const sourceIndex = localResources.value.findIndex(
+    (item) => item.id === draggingId.value
+  );
+  const targetIndex = localResources.value.findIndex(
+    (item) => item.id === targetId
+  );
 
   if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) {
-    dragOverId.value = '';
+    dragOverId.value = "";
     return;
   }
 
@@ -250,12 +272,12 @@ function handleTileDrop(event: DragEvent, targetId: string) {
   if (!moved) return;
   next.splice(targetIndex, 0, moved);
   localResources.value = next;
-  dragOverId.value = '';
+  dragOverId.value = "";
 }
 
 function handleTileDragEnd() {
-  draggingId.value = '';
-  dragOverId.value = '';
+  draggingId.value = "";
+  dragOverId.value = "";
 }
 
 // Playback Logic
@@ -314,14 +336,24 @@ function syncCurrentTimeFromPrimary() {
   if (!media) return;
 
   const segmentStart = segmentStarts.value[activeChunkIndex.value] || 0;
-  currentTime.value = Math.min(duration.value, segmentStart + media.currentTime);
+  currentTime.value = Math.min(
+    duration.value,
+    segmentStart + media.currentTime
+  );
   syncIsPlayingFromPrimary();
 }
 
-async function switchChunk(chunkIndex: number, localTime = 0, autoPlay = false) {
+async function switchChunk(
+  chunkIndex: number,
+  localTime = 0,
+  autoPlay = false
+) {
   if (localResources.value.length === 0) return;
 
-  const maxIndex = Math.max(0, (localResources.value[0]?.chunkUrls.length || 1) - 1);
+  const maxIndex = Math.max(
+    0,
+    (localResources.value[0]?.chunkUrls.length || 1) - 1
+  );
   const safeChunkIndex = Math.max(0, Math.min(chunkIndex, maxIndex));
 
   suppressTimeUpdate.value = true;
@@ -333,8 +365,12 @@ async function switchChunk(chunkIndex: number, localTime = 0, autoPlay = false) 
       const media = mediaRefs.value[item.id];
       if (!media) return;
 
-      const chunkDuration = segmentDurations.value[safeChunkIndex] || media.duration || 0;
-      const safeLocalTime = Math.max(0, Math.min(localTime, Math.max(0, chunkDuration - 0.05)));
+      const chunkDuration =
+        segmentDurations.value[safeChunkIndex] || media.duration || 0;
+      const safeLocalTime = Math.max(
+        0,
+        Math.min(localTime, Math.max(0, chunkDuration - 0.05))
+      );
       media.currentTime = Number.isFinite(safeLocalTime) ? safeLocalTime : 0;
     });
 
@@ -386,14 +422,16 @@ async function handlePrimaryEnded() {
 }
 
 // Handlers for PlayerControls
-const handlePlayPause = () => (isPlaying.value ? pauseAllVideos() : void playAllVideos());
+const handlePlayPause = () =>
+  isPlaying.value ? pauseAllVideos() : void playAllVideos();
 const handleRateChange = (value: number) => {
   playbackRate.value = value;
   applyVideoSettings();
 };
 const handleSpeedDown = () => {
   const idx = PLAYBACK_RATE_LEVELS.indexOf(playbackRate.value);
-  if (idx < PLAYBACK_RATE_LEVELS.length - 1) handleRateChange(PLAYBACK_RATE_LEVELS[idx + 1]!);
+  if (idx < PLAYBACK_RATE_LEVELS.length - 1)
+    handleRateChange(PLAYBACK_RATE_LEVELS[idx + 1]!);
 };
 const handleSpeedUp = () => {
   const idx = PLAYBACK_RATE_LEVELS.indexOf(playbackRate.value);
@@ -458,23 +496,41 @@ defineExpose({
       class="flex flex-col overflow-hidden backdrop-blur-sm transition-all duration-300 vwp-bg-sidebar vwp-border border vwp-radius vwp-shadow"
       :style="{ width: `${sidebarWidth}px` }"
     >
-      <div class="px-4 py-3 border-b vwp-border flex justify-between items-center bg-white/[0.02]">
-        <span class="text-sm font-semibold tracking-wide uppercase vwp-text-primary">{{ title || 'Segments' }}</span>
-        <span class="text-xs font-mono vwp-accent-bg-soft px-2 py-0.5 rounded-full vwp-accent">{{ formatTime(duration) }}</span>
+      <div
+        class="px-4 py-3 border-b vwp-border flex justify-between items-center bg-white/[0.02]"
+      >
+        <span
+          class="text-sm font-semibold tracking-wide uppercase vwp-text-primary"
+          >{{ title || "Segments" }}</span
+        >
+        <span
+          class="text-xs font-mono vwp-accent-bg-soft px-2 py-0.5 rounded-full vwp-accent"
+          >{{ formatTime(duration) }}</span
+        >
       </div>
       <div class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
         <div
           v-for="segment in segmentList"
           :key="segment.index"
           class="group relative cursor-pointer rounded-lg px-3 py-2.5 text-sm transition-all duration-200 border border-transparent"
-          :class="activeChunkIndex === segment.index ? 'vwp-accent-bg-soft vwp-border vwp-accent' : 'hover:bg-white/5 vwp-text-secondary hover:text-gray-200'"
+          :class="
+            activeChunkIndex === segment.index
+              ? 'vwp-accent-bg-soft vwp-border vwp-accent'
+              : 'hover:bg-white/5 vwp-text-secondary hover:text-gray-200'
+          "
           @click="handleSegmentClick(segment.index)"
         >
           <div class="flex justify-between items-center relative z-10">
             <span class="truncate font-medium">{{ segment.name }}</span>
-            <span class="text-xs font-mono opacity-60 group-hover:opacity-100 transition-opacity">{{ formatTime(segment.duration) }}</span>
+            <span
+              class="text-xs font-mono opacity-60 group-hover:opacity-100 transition-opacity"
+              >{{ formatTime(segment.duration) }}</span
+            >
           </div>
-          <div v-if="activeChunkIndex === segment.index" class="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-lg vwp-accent-bg"></div>
+          <div
+            v-if="activeChunkIndex === segment.index"
+            class="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-lg vwp-accent-bg"
+          ></div>
         </div>
       </div>
     </div>
@@ -483,18 +539,28 @@ defineExpose({
     <div
       ref="wallRef"
       class="relative flex flex-1 flex-col overflow-hidden vwp-bg-main vwp-shadow vwp-border border ring-1 ring-white/5 vwp-radius group/wall"
-      :style="{ padding: `${videoWallPadding}px` }"
     >
-      <div ref="containerRef" class="flex flex-1 items-center justify-center overflow-hidden relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gray-900/50 to-black pb-[60px]">
-        <div :style="gridStyle" class="mx-auto my-auto transition-all duration-500 ease-out">
+      <div
+        ref="containerRef"
+        class="flex flex-1 items-center justify-center overflow-hidden relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gray-900/50 to-black mb-[64px]"
+        :style="{ padding: `${videoWallPadding}px` }"
+      >
+        <div
+          :style="gridStyle"
+          class="mx-auto my-auto transition-all duration-500 ease-out"
+        >
           <div
             v-for="item in localResources"
             :key="item.id"
             class="wall-tile relative overflow-hidden vwp-bg-tile vwp-border border transition-all duration-300 group vwp-radius"
             :class="[
               draggable ? 'cursor-grab active:cursor-grabbing' : '',
-              draggingId === item.id ? 'opacity-50 scale-95 ring-2 ring-blue-500/50' : 'hover:shadow-lg',
-              dragOverId === item.id ? 'ring-2 ring-blue-500 scale-[1.02] z-10' : '',
+              draggingId === item.id
+                ? 'opacity-50 scale-95 ring-2 ring-blue-500/50'
+                : 'hover:shadow-lg',
+              dragOverId === item.id
+                ? 'ring-2 ring-blue-500 scale-[1.02] z-10'
+                : '',
             ]"
             :style="itemStyle"
             :draggable="draggable"
@@ -509,9 +575,15 @@ defineExpose({
               :ref="(el) => setMediaRef(item.id, el as HTMLAudioElement)"
               :src="item.chunkUrls[activeChunkIndex] || ''"
               preload="metadata"
-              @timeupdate="item.id === primaryId ? syncCurrentTimeFromPrimary() : undefined"
-              @play="item.id === primaryId ? syncIsPlayingFromPrimary() : undefined"
-              @pause="item.id === primaryId ? syncIsPlayingFromPrimary() : undefined"
+              @timeupdate="
+                item.id === primaryId ? syncCurrentTimeFromPrimary() : undefined
+              "
+              @play="
+                item.id === primaryId ? syncIsPlayingFromPrimary() : undefined
+              "
+              @pause="
+                item.id === primaryId ? syncIsPlayingFromPrimary() : undefined
+              "
               @ended="item.id === primaryId ? handlePrimaryEnded() : undefined"
             ></audio>
             <video
@@ -523,9 +595,15 @@ defineExpose({
               :poster="item.poster"
               playsinline
               preload="metadata"
-              @timeupdate="item.id === primaryId ? syncCurrentTimeFromPrimary() : undefined"
-              @play="item.id === primaryId ? syncIsPlayingFromPrimary() : undefined"
-              @pause="item.id === primaryId ? syncIsPlayingFromPrimary() : undefined"
+              @timeupdate="
+                item.id === primaryId ? syncCurrentTimeFromPrimary() : undefined
+              "
+              @play="
+                item.id === primaryId ? syncIsPlayingFromPrimary() : undefined
+              "
+              @pause="
+                item.id === primaryId ? syncIsPlayingFromPrimary() : undefined
+              "
               @ended="item.id === primaryId ? handlePrimaryEnded() : undefined"
             ></video>
 
@@ -534,21 +612,40 @@ defineExpose({
               v-if="isAudioChunk"
               class="absolute inset-0 flex flex-col items-center justify-center gap-4 vwp-text-secondary pointer-events-none bg-gradient-to-b from-transparent to-black/20"
             >
-              <div class="p-4 rounded-full bg-white/5 border vwp-border backdrop-blur-sm">
+              <div
+                class="p-4 rounded-full bg-white/5 border vwp-border backdrop-blur-sm"
+              >
                 <AudioLines class="w-8 h-8 vwp-accent" />
               </div>
-              <span class="text-xs font-mono tracking-widest uppercase opacity-60">Audio Stream</span>
+              <span
+                class="text-xs font-mono tracking-widest uppercase opacity-60"
+                >Audio Stream</span
+              >
             </div>
 
             <!-- Meta Overlay -->
             <div
               v-if="showTileTitle"
               class="absolute left-0 top-0 right-0 p-3 transition-opacity duration-200 bg-gradient-to-b from-black/80 to-transparent pointer-events-none"
-              :class="fixedTileMeta ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
+              :class="
+                fixedTileMeta
+                  ? 'opacity-100'
+                  : 'opacity-0 group-hover:opacity-100'
+              "
             >
-              <div class="inline-flex items-center gap-2 px-2 py-1 rounded bg-black/40 border border-white/10 backdrop-blur-md">
-                <div class="w-1.5 h-1.5 rounded-full" :class="isPlaying ? 'bg-green-500 animate-pulse' : 'bg-gray-500'"></div>
-                <span class="text-[10px] font-medium tracking-wide text-gray-200">{{ item.name || item.id }}</span>
+              <div
+                class="inline-flex items-center gap-2 px-2 py-1 rounded bg-black/40 border border-white/10 backdrop-blur-md"
+              >
+                <div
+                  class="w-1.5 h-1.5 rounded-full"
+                  :class="
+                    isPlaying ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
+                  "
+                ></div>
+                <span
+                  class="text-[10px] font-medium tracking-wide text-gray-200"
+                  >{{ item.name || item.id }}</span
+                >
               </div>
             </div>
 
@@ -556,23 +653,38 @@ defineExpose({
             <div
               v-if="showTileMute"
               class="absolute bottom-3 right-3 z-30 cursor-pointer rounded-full bg-black/40 p-2 text-white/80 border border-white/5 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white hover:scale-110 active:scale-95"
-              :class="fixedTileMeta ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
+              :class="
+                fixedTileMeta
+                  ? 'opacity-100'
+                  : 'opacity-0 group-hover:opacity-100'
+              "
               @click.stop="toggleIndividualMute(item.id)"
             >
-              <VolumeX v-if="individualMutedStates[item.id]" class="w-3.5 h-3.5" />
+              <VolumeX
+                v-if="individualMutedStates[item.id]"
+                class="w-3.5 h-3.5"
+              />
               <Volume2 v-else class="w-3.5 h-3.5" />
             </div>
-            
+
             <!-- Loading/Empty State Placeholder -->
-            <div v-if="!item.chunkUrls[activeChunkIndex]" class="absolute inset-0 flex items-center justify-center vwp-bg-main">
-              <div class="w-8 h-8 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin"></div>
+            <div
+              v-if="!item.chunkUrls[activeChunkIndex]"
+              class="absolute inset-0 flex items-center justify-center vwp-bg-main"
+            >
+              <div
+                class="w-8 h-8 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin"
+              ></div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Controls -->
-      <div v-if="showControls" class="absolute bottom-0 left-0 right-0 z-50 pointer-events-auto">
+      <div
+        v-if="showControls"
+        class="absolute bottom-0 left-0 right-0 z-50 pointer-events-auto"
+      >
         <PlayerControls
           :is-playing="isPlaying"
           :current-time="currentTime"
@@ -608,5 +720,5 @@ defineExpose({
 </template>
 
 <style>
-@import '../../styles/themes.css';
+@import "../../styles/themes.css";
 </style>
