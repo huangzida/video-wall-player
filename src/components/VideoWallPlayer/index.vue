@@ -33,6 +33,7 @@ const props = withDefaults(defineProps<{
   fixedTileMeta?: boolean;
   sidebarWidth?: number;
   wallPadding?: number;
+  videoWallPadding?: number;
 }>(), {
   resources: () => [],
   title: '',
@@ -57,6 +58,7 @@ const props = withDefaults(defineProps<{
   fixedTileMeta: true,
   sidebarWidth: 280,
   wallPadding: 10,
+  videoWallPadding: 0,
 });
 
 const emit = defineEmits<{
@@ -484,6 +486,7 @@ defineExpose({
     <div
       ref="wallRef"
       class="relative flex flex-1 flex-col overflow-hidden vwp-bg-main vwp-shadow vwp-border border ring-1 ring-white/5 vwp-radius group/wall"
+      :style="{ padding: `${videoWallPadding}px` }"
     >
       <div ref="containerRef" class="flex flex-1 items-center justify-center overflow-hidden relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gray-900/50 to-black pb-[60px]">
         <div :style="gridStyle" class="mx-auto my-auto transition-all duration-500 ease-out">

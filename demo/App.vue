@@ -61,6 +61,7 @@ const fixedTileMeta = useStorage('demo-fixed-tile-meta', true);
 const stepSeconds = useStorage('demo-step-seconds', 5);
 const sidebarWidth = useStorage('demo-sidebar-width', 280);
 const wallPadding = useStorage('demo-wall-padding', 10);
+const videoWallPadding = useStorage('demo-video-wall-padding', 0);
 
 const tags = ref<VideoWallTag[]>([
   { time: 10, name: 'Intro End', color: '#ef4444' },
@@ -97,6 +98,7 @@ const showSettings = ref(false);
       :fixed-tile-meta="fixedTileMeta"
       :sidebar-width="sidebarWidth"
       :wall-padding="wallPadding"
+      :video-wall-padding="videoWallPadding"
     />
 
     <!-- Settings Toggle -->
@@ -268,6 +270,19 @@ const showSettings = ref(false);
           <input
             type="range"
             v-model.number="wallPadding"
+            min="0"
+            max="50"
+            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+          />
+        </div>
+        <div class="space-y-1">
+          <div class="flex justify-between text-sm text-gray-400">
+            <label>Video Wall Padding</label>
+            <span>{{ videoWallPadding }}px</span>
+          </div>
+          <input
+            type="range"
+            v-model.number="videoWallPadding"
             min="0"
             max="50"
             class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
