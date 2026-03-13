@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.0.6...main
+
+[compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.6...main)
+
+### 🏡 Chore
+
+- Use --all flag in bumpp to include changelog in release commit ([a1bb0e7](https://github.com/huangzida/video-wall-player/commit/a1bb0e7))
+
+### ❤️ Contributors
+
+- Huangzida <398926656@qq.com>
+
 ## v0.0.5...main
 
 [compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.5...main)
