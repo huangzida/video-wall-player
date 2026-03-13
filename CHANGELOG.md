@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.0.1...main
+
+[compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.1...main)
+
+### 📖 Documentation
+
+- 更新文档中引用的构建资源文件名 ([2d2153e](https://github.com/huangzida/video-wall-player/commit/2d2153e))
+
+### 🏡 Chore
+
+- Track CHANGELOG.md and fix release script to include it ([34dd571](https://github.com/huangzida/video-wall-player/commit/34dd571))
+
+### ❤️ Contributors
+
+- Huangzida <398926656@qq.com>
+
 ## ...main
 
 
