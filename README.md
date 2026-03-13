@@ -69,6 +69,16 @@ const resources = [
 | `showControls` | `boolean` | `true` | Whether to show the bottom control bar. |
 | `objectFit` | `'contain' \| 'cover' \| 'fill'` | `'contain'` | Object fit mode for video elements. |
 
+| `theme` | `'default' \| 'cyberpunk' \| 'industrial' \| 'minimalist'` | `'default'` | UI theme of the player. |
+| `draggable` | `boolean` | `true` | Whether to enable drag and drop reordering. |
+| `showTileTitle` | `boolean` | `true` | Whether to show title overlay on video tiles. |
+| `showTileMute` | `boolean` | `true` | Whether to show mute button on video tiles. |
+| `showSidebar` | `boolean` | `true` | Whether to show the sidebar. |
+| `showPrevNextChunk` | `boolean` | `true` | Whether to show prev/next chunk buttons. |
+| `showStepSkip` | `boolean` | `true` | Whether to show step backward/forward buttons. |
+| `stepSeconds` | `number` | `5` | Seconds to skip when using step buttons. |
+| `tags` | `VideoWallTag[]` | `[]` | List of timeline tags. |
+
 ### VideoWallResource Interface
 
 ```typescript
@@ -78,6 +88,15 @@ interface VideoWallResource {
   chunkUrls: string[]; // List of chunk URLs
   durations: number[]; // List of durations for each chunk (in seconds)
   poster?: string;     // Optional poster image URL
+}
+```
+
+### VideoWallTag Interface
+
+```typescript
+interface VideoWallTag {
+  time: number; // Time in seconds
+  name: string; // Tag name displayed in tooltip
 }
 ```
 

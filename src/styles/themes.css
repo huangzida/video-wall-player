@@ -1,0 +1,95 @@
+:root {
+  /* Default Theme (Classic Dark) */
+  --vwp-bg-main: #0a0a0a;
+  --vwp-bg-sidebar: #141414;
+  --vwp-bg-tile: #0f0f0f;
+  --vwp-border: rgba(255, 255, 255, 0.05);
+  --vwp-text-primary: #f3f4f6;
+  --vwp-text-secondary: #9ca3af;
+  --vwp-accent: #3b82f6;
+  --vwp-accent-hover: #2563eb;
+  --vwp-accent-bg: rgba(59, 130, 246, 0.1);
+  --vwp-radius: 0.75rem;
+  --vwp-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --vwp-font-family: ui-sans-serif, system-ui, sans-serif;
+  --vwp-tile-hover-border: rgba(255, 255, 255, 0.1);
+}
+
+.theme-cyberpunk {
+  --vwp-bg-main: #020410;
+  --vwp-bg-sidebar: rgba(10, 10, 30, 0.8);
+  --vwp-bg-tile: rgba(5, 5, 20, 0.6);
+  --vwp-border: rgba(0, 255, 255, 0.2);
+  --vwp-text-primary: #e0f7ff;
+  --vwp-text-secondary: #5eead4;
+  --vwp-accent: #06b6d4;
+  --vwp-accent-hover: #22d3ee;
+  --vwp-accent-bg: rgba(6, 182, 212, 0.15);
+  --vwp-radius: 0;
+  --vwp-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+  --vwp-font-family: 'Courier New', monospace;
+  --vwp-tile-hover-border: #06b6d4;
+}
+
+.theme-industrial {
+  --vwp-bg-main: #1a1a1a;
+  --vwp-bg-sidebar: #262626;
+  --vwp-bg-tile: #000000;
+  --vwp-border: #404040;
+  --vwp-text-primary: #ffffff;
+  --vwp-text-secondary: #d4d4d4;
+  --vwp-accent: #eab308;
+  --vwp-accent-hover: #facc15;
+  --vwp-accent-bg: rgba(234, 179, 8, 0.15);
+  --vwp-radius: 2px;
+  --vwp-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
+  --vwp-font-family: 'Arial Black', sans-serif;
+  --vwp-tile-hover-border: #eab308;
+}
+
+.theme-minimalist {
+  --vwp-bg-main: #f9fafb;
+  --vwp-bg-sidebar: #ffffff;
+  --vwp-bg-tile: #f3f4f6;
+  --vwp-border: transparent;
+  --vwp-text-primary: #111827;
+  --vwp-text-secondary: #6b7280;
+  --vwp-accent: #111827;
+  --vwp-accent-hover: #374151;
+  --vwp-accent-bg: rgba(0, 0, 0, 0.05);
+  --vwp-radius: 1rem;
+  --vwp-shadow: none;
+  --vwp-font-family: ui-sans-serif, system-ui, sans-serif;
+  --vwp-tile-hover-border: transparent;
+}
+
+/* Common utility classes using vars */
+.vwp-bg-main { background-color: var(--vwp-bg-main); }
+.vwp-bg-sidebar { background-color: var(--vwp-bg-sidebar); }
+.vwp-bg-tile { background-color: var(--vwp-bg-tile); }
+.vwp-border { border-color: var(--vwp-border); }
+.vwp-text-primary { color: var(--vwp-text-primary); }
+.vwp-text-secondary { color: var(--vwp-text-secondary); }
+.vwp-accent { color: var(--vwp-accent); }
+.vwp-accent-bg { background-color: var(--vwp-accent); }
+.vwp-accent-bg-soft { background-color: var(--vwp-accent-bg); }
+.vwp-radius { border-radius: var(--vwp-radius); }
+.vwp-shadow { box-shadow: var(--vwp-shadow); }
+.vwp-font { font-family: var(--vwp-font-family); }
+
+/* Theme Specific Tweaks */
+.theme-cyberpunk .wall-tile {
+  background-image: linear-gradient(0deg, transparent 24%, rgba(6, 182, 212, .1) 25%, rgba(6, 182, 212, .1) 26%, transparent 27%, transparent 74%, rgba(6, 182, 212, .1) 75%, rgba(6, 182, 212, .1) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(6, 182, 212, .1) 25%, rgba(6, 182, 212, .1) 26%, transparent 27%, transparent 74%, rgba(6, 182, 212, .1) 75%, rgba(6, 182, 212, .1) 76%, transparent 77%, transparent);
+  background-size: 30px 30px;
+}
+
+.theme-industrial .wall-tile::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; width: 0; height: 0;
+  border-style: solid;
+  border-width: 0 24px 24px 0;
+  border-color: transparent var(--vwp-accent) transparent transparent;
+  opacity: 0.8;
+  pointer-events: none;
+}

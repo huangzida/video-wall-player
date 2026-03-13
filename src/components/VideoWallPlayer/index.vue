@@ -5,7 +5,7 @@ import { AudioLines, Volume2, VolumeX } from 'lucide-vue-next';
 import PlayerControls from '../PlayerControls/index.vue';
 import { useVideoWallLayout } from '../../hooks/useVideoWallLayout';
 import { formatTime, PLAYBACK_RATE_LEVELS } from '../../utils';
-import type { VideoWallResource } from './types';
+import type { VideoWallResource, VideoWallTag, VideoWallTheme } from './types';
 
 defineOptions({ name: 'VideoWallPlayer' });
 
@@ -19,6 +19,15 @@ const props = withDefaults(defineProps<{
   gap?: number;
   showControls?: boolean;
   objectFit?: 'contain' | 'cover' | 'fill';
+  theme?: VideoWallTheme;
+  draggable?: boolean;
+  showTileTitle?: boolean;
+  showTileMute?: boolean;
+  showSidebar?: boolean;
+  tags?: VideoWallTag[];
+  showPrevNextChunk?: boolean;
+  showStepSkip?: boolean;
+  stepSeconds?: number;
 }>(), {
   resources: () => [],
   title: '',
@@ -29,6 +38,15 @@ const props = withDefaults(defineProps<{
   gap: 8,
   showControls: true,
   objectFit: 'contain',
+  theme: 'default',
+  draggable: true,
+  showTileTitle: true,
+  showTileMute: true,
+  showSidebar: true,
+  tags: () => [],
+  showPrevNextChunk: true,
+  showStepSkip: true,
+  stepSeconds: 5,
 });
 
 const emit = defineEmits<{
@@ -395,7 +413,22 @@ const toggleIndividualMute = (id: string) => {
   individualMutedStates.value[id] = !individualMutedStates.value[id];
   applyVideoSettings();
 };
-const handleSegmentClick = (index: number) => void switchChunk(index, 0, isPlaying.value);
+const handleStepBack = (seconds: number) => {
+  void handleSeek(Math.max(0, currentTime.value - seconds));
+};
+const handleStepForward = (seconds: number) => {
+  void handleSeek(Math.min(duration.value, currentTime.value + seconds));
+};
+const handlePrevChunk = () => {
+  if (activeChunkIndex.value > 0) {
+    void switchChunk(activeChunkIndex.value - 1, 0, isPlaying.value);
+  }
+};
+const handleNextChunk = () => {
+  if (activeChunkIndex.value < segmentList.value.length - 1) {
+    void switchChunk(activeChunkIndex.value + 1, 0, isPlaying.value);
+  }
+};
 
 defineExpose({
   play: playAllVideos,
@@ -405,26 +438,32 @@ defineExpose({
 </script>
 
 <template>
-  <div class="flex w-full h-full min-h-[500px] gap-4 bg-[#0a0a0a] p-4 text-gray-100 font-sans">
+  <div
+    class="flex w-full h-full min-h-[500px] gap-4 p-4 text-gray-100 font-sans transition-colors duration-300 vwp-bg-main vwp-font"
+    :class="[`theme-${theme}`]"
+  >
     <!-- Sidebar -->
-    <div class="w-[280px] flex flex-col rounded-xl bg-[#141414] border border-white/5 shadow-2xl overflow-hidden backdrop-blur-sm">
-      <div class="px-4 py-3 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-        <span class="text-sm font-semibold tracking-wide text-gray-300 uppercase">{{ title || 'Segments' }}</span>
-        <span class="text-xs font-mono text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full">{{ formatTime(duration) }}</span>
+    <div
+      v-if="showSidebar"
+      class="w-[280px] flex flex-col overflow-hidden backdrop-blur-sm transition-all duration-300 vwp-bg-sidebar vwp-border border vwp-radius vwp-shadow"
+    >
+      <div class="px-4 py-3 border-b vwp-border flex justify-between items-center bg-white/[0.02]">
+        <span class="text-sm font-semibold tracking-wide uppercase vwp-text-primary">{{ title || 'Segments' }}</span>
+        <span class="text-xs font-mono vwp-accent-bg-soft px-2 py-0.5 rounded-full vwp-accent">{{ formatTime(duration) }}</span>
       </div>
       <div class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
         <div
           v-for="segment in segmentList"
           :key="segment.index"
           class="group relative cursor-pointer rounded-lg px-3 py-2.5 text-sm transition-all duration-200 border border-transparent"
-          :class="activeChunkIndex === segment.index ? 'bg-blue-600/10 border-blue-500/30 text-blue-100' : 'hover:bg-white/5 text-gray-400 hover:text-gray-200'"
+          :class="activeChunkIndex === segment.index ? 'vwp-accent-bg-soft vwp-border vwp-accent' : 'hover:bg-white/5 vwp-text-secondary hover:text-gray-200'"
           @click="handleSegmentClick(segment.index)"
         >
           <div class="flex justify-between items-center relative z-10">
             <span class="truncate font-medium">{{ segment.name }}</span>
             <span class="text-xs font-mono opacity-60 group-hover:opacity-100 transition-opacity">{{ formatTime(segment.duration) }}</span>
           </div>
-          <div v-if="activeChunkIndex === segment.index" class="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500 rounded-l-lg"></div>
+          <div v-if="activeChunkIndex === segment.index" class="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-lg vwp-accent-bg"></div>
         </div>
       </div>
     </div>
@@ -432,21 +471,21 @@ defineExpose({
     <!-- Main Wall -->
     <div
       ref="wallRef"
-      class="relative flex flex-1 flex-col overflow-hidden rounded-xl bg-[#000000] shadow-2xl border border-white/5 ring-1 ring-white/5"
+      class="relative flex flex-1 flex-col overflow-hidden vwp-bg-main vwp-shadow vwp-border border ring-1 ring-white/5 vwp-radius"
     >
       <div ref="containerRef" class="flex flex-1 items-center justify-center overflow-hidden relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gray-900/50 to-black">
         <div :style="gridStyle" class="mx-auto my-auto transition-all duration-500 ease-out">
           <div
             v-for="item in localResources"
             :key="item.id"
-            class="wall-tile relative overflow-hidden rounded-lg bg-[#0f0f0f] border border-white/5 transition-all duration-300 group"
+            class="wall-tile relative overflow-hidden vwp-bg-tile vwp-border border transition-all duration-300 group vwp-radius"
             :class="[
-              showPerTileMeta ? 'cursor-grab active:cursor-grabbing' : '',
-              draggingId === item.id ? 'opacity-50 scale-95 ring-2 ring-blue-500/50' : 'hover:border-white/10 hover:shadow-lg',
+              draggable ? 'cursor-grab active:cursor-grabbing' : '',
+              draggingId === item.id ? 'opacity-50 scale-95 ring-2 ring-blue-500/50' : 'hover:shadow-lg',
               dragOverId === item.id ? 'ring-2 ring-blue-500 scale-[1.02] z-10' : '',
             ]"
             :style="itemStyle"
-            :draggable="showPerTileMeta"
+            :draggable="draggable"
             @dragstart="handleTileDragStart($event, item.id)"
             @dragover="handleTileDragOver($event, item.id)"
             @drop="handleTileDrop($event, item.id)"
@@ -481,16 +520,16 @@ defineExpose({
             <!-- Audio Placeholder -->
             <div
               v-if="isAudioChunk"
-              class="absolute inset-0 flex flex-col items-center justify-center gap-4 text-gray-500 pointer-events-none bg-gradient-to-b from-transparent to-black/20"
+              class="absolute inset-0 flex flex-col items-center justify-center gap-4 vwp-text-secondary pointer-events-none bg-gradient-to-b from-transparent to-black/20"
             >
-              <div class="p-4 rounded-full bg-white/5 border border-white/5 backdrop-blur-sm">
-                <AudioLines class="w-8 h-8 text-blue-400" />
+              <div class="p-4 rounded-full bg-white/5 border vwp-border backdrop-blur-sm">
+                <AudioLines class="w-8 h-8 vwp-accent" />
               </div>
               <span class="text-xs font-mono tracking-widest uppercase opacity-60">Audio Stream</span>
             </div>
 
             <!-- Meta Overlay -->
-            <div v-if="showPerTileMeta" class="absolute left-0 top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+            <div v-if="showTileTitle" class="absolute left-0 top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
               <div class="inline-flex items-center gap-2 px-2 py-1 rounded bg-black/40 border border-white/10 backdrop-blur-md">
                 <div class="w-1.5 h-1.5 rounded-full" :class="isPlaying ? 'bg-green-500 animate-pulse' : 'bg-gray-500'"></div>
                 <span class="text-[10px] font-medium tracking-wide text-gray-200">{{ item.name || item.id }}</span>
@@ -499,7 +538,7 @@ defineExpose({
 
             <!-- Mute Button -->
             <div
-              v-if="showPerTileMeta"
+              v-if="showTileMute"
               class="absolute bottom-3 right-3 z-30 cursor-pointer rounded-full bg-black/40 p-2 text-white/80 border border-white/5 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white hover:scale-110 active:scale-95 opacity-0 group-hover:opacity-100"
               @click.stop="toggleIndividualMute(item.id)"
             >
@@ -507,8 +546,8 @@ defineExpose({
               <Volume2 v-else class="w-3.5 h-3.5" />
             </div>
             
-            <!-- Loading/Empty State Placeholder (Optional enhancement) -->
-            <div v-if="!item.chunkUrls[activeChunkIndex]" class="absolute inset-0 flex items-center justify-center bg-[#0a0a0a]">
+            <!-- Loading/Empty State Placeholder -->
+            <div v-if="!item.chunkUrls[activeChunkIndex]" class="absolute inset-0 flex items-center justify-center vwp-bg-main">
               <div class="w-8 h-8 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin"></div>
             </div>
           </div>
@@ -526,6 +565,10 @@ defineExpose({
           :volume="volume"
           :is-muted="isMuted"
           :show-stop="false"
+          :tags="tags"
+          :show-prev-next-chunk="showPrevNextChunk"
+          :show-step-skip="showStepSkip"
+          :step-seconds="stepSeconds"
           @speed-down="handleSpeedDown"
           @play-pause="handlePlayPause"
           @speed-up="handleSpeedUp"
@@ -534,28 +577,16 @@ defineExpose({
           @volume-toggle="handleVolumeToggle"
           @volume-change="handleVolumeChange"
           @fullscreen="toggleFullscreen"
+          @step-back="handleStepBack"
+          @step-forward="handleStepForward"
+          @prev-chunk="handlePrevChunk"
+          @next-chunk="handleNextChunk"
         />
       </div>
     </div>
   </div>
 </template>
 
-<style scoped>
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: 9999px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.wall-tile {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
+<style>
+@import '../../styles/themes.css';
 </style>

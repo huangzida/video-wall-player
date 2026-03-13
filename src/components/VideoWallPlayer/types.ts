@@ -1,3 +1,8 @@
+export interface VideoWallTag {
+  time: number;
+  name: string;
+}
+
 export interface VideoWallResource {
   id: string;
   name: string;
@@ -5,3 +10,5 @@ export interface VideoWallResource {
   durations: number[];
   poster?: string;
 }
+
+export type VideoWallTheme = 'default' | 'cyberpunk' | 'industrial' | 'minimalist';

@@ -69,6 +69,16 @@ const resources = [
 | `showControls` | `boolean` | `true` | 是否显示底部控制栏。 |
 | `objectFit` | `'contain' \| 'cover' \| 'fill'` | `'contain'` | 视频画面的填充模式。 |
 
+| `theme` | `'default' \| 'cyberpunk' \| 'industrial' \| 'minimalist'` | `'default'` | 播放器 UI 主题。 |
+| `draggable` | `boolean` | `true` | 是否启用拖拽排序。 |
+| `showTileTitle` | `boolean` | `true` | 是否显示视频格子的标题浮层。 |
+| `showTileMute` | `boolean` | `true` | 是否显示视频格子的静音按钮。 |
+| `showSidebar` | `boolean` | `true` | 是否显示侧边栏。 |
+| `showPrevNextChunk` | `boolean` | `true` | 是否显示上一个/下一个片段按钮。 |
+| `showStepSkip` | `boolean` | `true` | 是否显示快退/快进按钮。 |
+| `stepSeconds` | `number` | `5` | 快退/快进的步进秒数。 |
+| `tags` | `VideoWallTag[]` | `[]` | 时间轴打点列表。 |
+
 ### VideoWallResource 类型定义
 
 ```typescript
@@ -78,6 +88,15 @@ interface VideoWallResource {
   chunkUrls: string[]; // 分片 URL 列表
   durations: number[]; // 对应的分片时长列表（秒）
   poster?: string;     // 可选的封面图 URL
+}
+```
+
+### VideoWallTag 类型定义
+
+```typescript
+interface VideoWallTag {
+  time: number; // 时间点（秒）
+  name: string; // Tooltip 显示的打点名称
 }
 ```
 

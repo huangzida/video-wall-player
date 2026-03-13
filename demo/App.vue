@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue';
 import { useStorage } from '@vueuse/core';
 import { VideoWallPlayer } from '../src/index';
+import type { VideoWallTag, VideoWallTheme } from '../src/components/VideoWallPlayer/types';
 
 // const testUrl = '//sf1-cdn-tos.huoshanstatic.com/obj/media-fe/xgplayer_doc_video/mp4/xgplayer-demo-360p.mp4';
 // const testDuration = 90;
@@ -47,6 +48,20 @@ const showControls = useStorage('demo-show-controls', true);
 const aspectRatio = useStorage('demo-aspect-ratio', 16 / 9);
 const gap = useStorage('demo-gap', 8);
 const objectFit = useStorage<'contain' | 'cover' | 'fill'>('demo-object-fit', 'contain');
+const theme = useStorage<VideoWallTheme>('demo-theme', 'default');
+const draggable = useStorage('demo-draggable', true);
+const showTileTitle = useStorage('demo-show-tile-title', true);
+const showTileMute = useStorage('demo-show-tile-mute', true);
+const showSidebar = useStorage('demo-show-sidebar', true);
+const showPrevNextChunk = useStorage('demo-show-prev-next-chunk', true);
+const showStepSkip = useStorage('demo-show-step-skip', true);
+const stepSeconds = useStorage('demo-step-seconds', 5);
+
+const tags = ref<VideoWallTag[]>([
+  { time: 10, name: 'Intro End' },
+  { time: 25, name: 'Action Start' },
+  { time: 40, name: 'Climax' },
+]);
 
 const showSettings = ref(false);
 </script>
@@ -63,6 +78,15 @@ const showSettings = ref(false);
       :aspect-ratio="aspectRatio"
       :gap="gap"
       :object-fit="objectFit"
+      :theme="theme"
+      :draggable="draggable"
+      :show-tile-title="showTileTitle"
+      :show-tile-mute="showTileMute"
+      :show-sidebar="showSidebar"
+      :tags="tags"
+      :show-prev-next-chunk="showPrevNextChunk"
+      :show-step-skip="showStepSkip"
+      :step-seconds="stepSeconds"
     />
 
     <!-- Settings Toggle -->
@@ -129,6 +153,19 @@ const showSettings = ref(false);
         </div>
 
         <div class="space-y-1">
+          <label class="text-sm text-gray-400 block">Theme</label>
+          <select
+            v-model="theme"
+            class="w-full bg-gray-800 border border-gray-700 rounded p-2 text-sm focus:outline-none focus:border-blue-500"
+          >
+            <option value="default">Default (Classic Dark)</option>
+            <option value="cyberpunk">Cyberpunk (Sci-Fi)</option>
+            <option value="industrial">Industrial (Brutalist)</option>
+            <option value="minimalist">Minimalist (Clean)</option>
+          </select>
+        </div>
+
+        <div class="space-y-1">
           <label class="text-sm text-gray-400 block">Object Fit</label>
           <select
             v-model="objectFit"
@@ -142,6 +179,49 @@ const showSettings = ref(false);
 
         <div class="text-xs text-gray-500 mt-4 italic">
           Note: Autoplay/Muted changes may require reload to take effect fully.
+        </div>
+
+        <h4 class="font-bold mt-4 mb-2 text-sm border-b border-gray-700 pb-1">UI Toggles</h4>
+        
+        <div class="flex items-center justify-between">
+          <label>Show Sidebar</label>
+          <input type="checkbox" v-model="showSidebar" class="w-4 h-4 accent-blue-500" />
+        </div>
+        <div class="flex items-center justify-between">
+          <label>Draggable</label>
+          <input type="checkbox" v-model="draggable" class="w-4 h-4 accent-blue-500" />
+        </div>
+        <div class="flex items-center justify-between">
+          <label>Tile Title</label>
+          <input type="checkbox" v-model="showTileTitle" class="w-4 h-4 accent-blue-500" />
+        </div>
+        <div class="flex items-center justify-between">
+          <label>Tile Mute</label>
+          <input type="checkbox" v-model="showTileMute" class="w-4 h-4 accent-blue-500" />
+        </div>
+
+        <h4 class="font-bold mt-4 mb-2 text-sm border-b border-gray-700 pb-1">Controls</h4>
+
+        <div class="flex items-center justify-between">
+          <label>Prev/Next Chunk</label>
+          <input type="checkbox" v-model="showPrevNextChunk" class="w-4 h-4 accent-blue-500" />
+        </div>
+        <div class="flex items-center justify-between">
+          <label>Step Skip</label>
+          <input type="checkbox" v-model="showStepSkip" class="w-4 h-4 accent-blue-500" />
+        </div>
+        <div class="space-y-1">
+          <div class="flex justify-between text-sm text-gray-400">
+            <label>Step Seconds</label>
+            <span>{{ stepSeconds }}s</span>
+          </div>
+          <input
+            type="range"
+            v-model.number="stepSeconds"
+            min="1"
+            max="30"
+            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+          />
         </div>
       </div>
     </div>

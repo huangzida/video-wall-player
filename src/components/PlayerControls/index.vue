@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { toRefs, ref, watch, onUnmounted } from 'vue';
 import {
+  ChevronsLeft,
+  ChevronsRight,
   FastForward,
   Maximize,
   Pause,
   Play,
   Rewind,
+  SkipBack,
+  SkipForward,
   Volume2,
   VolumeX,
   X,
@@ -31,6 +35,9 @@ interface Props {
   showSpeedUp?: boolean;
   showPlaybackRate?: boolean;
   showStop?: boolean;
+  showPrevNextChunk?: boolean;
+  showStepSkip?: boolean;
+  stepSeconds?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -46,6 +53,9 @@ const props = withDefaults(defineProps<Props>(), {
   showSpeedUp: true,
   showPlaybackRate: true,
   showStop: true,
+  showPrevNextChunk: true,
+  showStepSkip: true,
+  stepSeconds: 5,
 });
 
 const emit = defineEmits<{
@@ -58,6 +68,10 @@ const emit = defineEmits<{
   stop: [];
   volumeChange: [volume: number];
   volumeToggle: [];
+  prevChunk: [];
+  nextChunk: [];
+  stepBack: [seconds: number];
+  stepForward: [seconds: number];
 }>();
 
 const {
@@ -73,6 +87,9 @@ const {
   showSpeedUp,
   showPlaybackRate,
   showStop,
+  showPrevNextChunk,
+  showStepSkip,
+  stepSeconds,
 } = toRefs(props);
 
 const showRateList = ref(false);
@@ -88,6 +105,11 @@ const justDraggedRef = ref(false);
 const handlePlayPause = () => emit('playPause');
 const handleSpeedDown = () => emit('speedDown');
 const handleSpeedUp = () => emit('speedUp');
+
+const handleStepBack = () => emit('stepBack', stepSeconds.value);
+const handleStepForward = () => emit('stepForward', stepSeconds.value);
+const handlePrevChunk = () => emit('prevChunk');
+const handleNextChunk = () => emit('nextChunk');
 
 const handleProgressTrackClick = (e: MouseEvent) => {
   if (justDraggedRef.value) {
@@ -194,15 +216,33 @@ onUnmounted(() => {
   <div class="flex items-center gap-4 px-6 py-3 text-gray-200 bg-black/80 backdrop-blur-md border-t border-white/10 absolute bottom-0 left-0 right-0 z-50 select-none transition-all duration-300 hover:bg-black/90">
     <!-- Left Controls -->
     <div class="flex items-center gap-1">
-      <div v-if="showSpeedDown" class="p-2 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleSpeedDown">
+      <div v-if="showPrevNextChunk" class="p-2 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handlePrevChunk" title="Previous Chunk">
+        <ChevronsLeft class="w-5 h-5" />
+      </div>
+      
+      <div v-if="showStepSkip" class="p-2 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleStepBack" :title="`Back ${stepSeconds}s`">
+        <SkipBack class="w-5 h-5" />
+      </div>
+
+      <div v-if="showSpeedDown" class="p-2 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleSpeedDown" title="Slower">
         <Rewind class="w-5 h-5" />
       </div>
+      
       <div class="p-2 flex items-center justify-center cursor-pointer hover:bg-blue-500 hover:text-white rounded-full transition-all active:scale-90 mx-1" @click="handlePlayPause">
         <Pause v-if="isPlaying" class="w-6 h-6 fill-current" />
         <Play v-else class="w-6 h-6 fill-current" />
       </div>
-      <div v-if="showSpeedUp" class="p-2 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleSpeedUp">
+      
+      <div v-if="showSpeedUp" class="p-2 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleSpeedUp" title="Faster">
         <FastForward class="w-5 h-5" />
+      </div>
+
+      <div v-if="showStepSkip" class="p-2 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleStepForward" :title="`Forward ${stepSeconds}s`">
+        <SkipForward class="w-5 h-5" />
+      </div>
+
+      <div v-if="showPrevNextChunk" class="p-2 flex items-center justify-center cursor-pointer hover:bg-white/10 hover:text-white rounded-full transition-all active:scale-90 text-gray-400" @click="handleNextChunk" title="Next Chunk">
+        <ChevronsRight class="w-5 h-5" />
       </div>
     </div>
 
@@ -235,11 +275,16 @@ onUnmounted(() => {
           <div
             v-for="tag in tags"
             :key="tag.id"
-            class="absolute top-1/2 w-2 h-2 bg-yellow-500 rounded-full -translate-y-1/2 -translate-x-1/2 hover:scale-150 hover:bg-yellow-400 z-10 transition-all cursor-help"
+            class="absolute top-1/2 w-2 h-2 bg-yellow-500 rounded-full -translate-y-1/2 -translate-x-1/2 hover:scale-150 hover:bg-yellow-400 z-10 transition-all cursor-help group/tag"
             :style="{ left: `${(tag.time / duration) * 100}%` }"
-            :title="tag.text"
             @click.stop="handleTagClick(tag)"
-          ></div>
+          >
+            <!-- Tooltip -->
+            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black/80 text-white text-xs rounded opacity-0 group-hover/tag:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-white/10 backdrop-blur-sm shadow-xl">
+              {{ tag.text }}
+              <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-black/80"></div>
+            </div>
+          </div>
         </div>
       </div>
 
