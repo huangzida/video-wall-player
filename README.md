@@ -2,10 +2,10 @@
 
 A powerful Vue 3 component for playing synchronized video streams in a responsive grid layout. Perfect for surveillance systems, multi-camera playback, and video wall applications.
 
-## 在线演示
-[点击查看 Live Demo](https://huangzida.github.io/video-wall-player/)
+## Live Demo
+[View Live Demo](https://huangzida.github.io/video-wall-player/)
 
-[中文文档](./README.zh-CN.md) | [Demo](https://huangzida.github.io/video-wall-player/)
+[中文文档](./README.zh-CN.md)
 
 ## Features
 
@@ -31,7 +31,7 @@ Ensure you have `vue` and `@vueuse/core` installed.
 ```vue
 <script setup lang="ts">
 import { VideoWallPlayer } from 'video-wall-player';
-import 'video-wall-player/dist/style.css'; // If needed
+import 'video-wall-player/dist/style.css'; // Required for styling
 
 const resources = [
   {
@@ -99,11 +99,29 @@ interface VideoWallResource {
 
 ```typescript
 interface VideoWallTag {
+  id?: string | number; // Optional unique identifier
   time: number; // Time in seconds
   name: string; // Tag name displayed in tooltip
   color?: string; // Optional color for the tag dot (e.g. '#ff0000', 'red')
 }
 ```
+
+### Events
+
+| Event | Payload | Description |
+| --- | --- | --- |
+| `error` | `message: string` | Emitted when an error occurs (e.g., video loading failed). |
+| `close` | - | Emitted when a close action is triggered (if applicable). |
+
+### Exposed Methods
+
+You can access these methods via template ref:
+
+| Method | Parameters | Description |
+| --- | --- | --- |
+| `play` | - | Resumes playback for all videos. |
+| `pause` | - | Pauses playback for all videos. |
+| `seek` | `time: number` | Seeks all videos to the specified time (in seconds). |
 
 ## License
 

@@ -5,7 +5,7 @@
 ## 在线演示
 [点击查看在线演示](https://huangzida.github.io/video-wall-player/)
 
-[English Documentation](./README.md) | [Demo](https://huangzida.github.io/video-wall-player/)
+[English Documentation](./README.md)
 
 ## 功能特性
 
@@ -31,7 +31,7 @@ pnpm add video-wall-player
 ```vue
 <script setup lang="ts">
 import { VideoWallPlayer } from 'video-wall-player';
-import 'video-wall-player/dist/style.css'; // 如果需要
+import 'video-wall-player/dist/style.css'; // 必须引入样式文件
 
 const resources = [
   {
@@ -99,11 +99,29 @@ interface VideoWallResource {
 
 ```typescript
 interface VideoWallTag {
+  id?: string | number; // 可选的唯一标识符
   time: number; // 时间点（秒）
   name: string; // Tooltip 显示的打点名称
   color?: string; // 可选的打点颜色（如 '#ff0000', 'red'）
 }
 ```
+
+### 事件 (Events)
+
+| 事件名 | 参数 | 描述 |
+| --- | --- | --- |
+| `error` | `message: string` | 当发生错误（如视频加载失败）时触发。 |
+| `close` | - | 当触发关闭操作时触发（如果适用）。 |
+
+### 暴露方法 (Exposed Methods)
+
+可以通过组件引用的 ref 访问以下方法：
+
+| 方法名 | 参数 | 描述 |
+| --- | --- | --- |
+| `play` | - | 恢复所有视频的播放。 |
+| `pause` | - | 暂停所有视频的播放。 |
+| `seek` | `time: number` | 将所有视频跳转到指定时间（秒）。 |
 
 ## 许可证
 
