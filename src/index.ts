@@ -1,4 +1,5 @@
 import { App } from 'vue';
+import './styles/main.css';
 import VideoWallPlayer from './components/VideoWallPlayer/index.vue';
 import PlayerControls from './components/PlayerControls/index.vue';
 
