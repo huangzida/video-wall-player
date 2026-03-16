@@ -247,7 +247,7 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="flex items-center gap-4 text-gray-200 bg-black/80 backdrop-blur-md border-t border-white/10 w-full select-none transition-all duration-300 hover:bg-black/90"
+    class="flex items-center gap-4 text-gray-200 backdrop-blur-md border-t border-white/10 w-full select-none transition-all duration-300 vwp-controls-bg hover:bg-black/90"
     :class="sizeClasses.container"
   >
     <!-- Left Controls -->

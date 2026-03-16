@@ -168,6 +168,7 @@ const showSettings = ref(false);
             <option value="cyberpunk">Cyberpunk (Sci-Fi)</option>
             <option value="industrial">Industrial (Brutalist)</option>
             <option value="minimalist">Minimalist (Clean)</option>
+            <option value="glass">Glass (Futuristic)</option>
           </select>
         </div>
 

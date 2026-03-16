@@ -63,10 +63,27 @@
   --vwp-tile-hover-border: transparent;
 }
 
+.theme-glass {
+  --vwp-bg-main: #000000;
+  --vwp-bg-sidebar: rgba(255, 255, 255, 0.05);
+  --vwp-bg-tile: rgba(255, 255, 255, 0.03);
+  --vwp-border: rgba(255, 255, 255, 0.08);
+  --vwp-text-primary: #ffffff;
+  --vwp-text-secondary: rgba(255, 255, 255, 0.6);
+  --vwp-accent: #ffffff;
+  --vwp-accent-hover: #ffffff;
+  --vwp-accent-bg: rgba(255, 255, 255, 0.1);
+  --vwp-radius: 1.5rem;
+  --vwp-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+  --vwp-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --vwp-tile-hover-border: rgba(255, 255, 255, 0.2);
+}
+
 /* Common utility classes using vars */
 .vwp-bg-main { background-color: var(--vwp-bg-main); }
 .vwp-bg-sidebar { background-color: var(--vwp-bg-sidebar); }
 .vwp-bg-tile { background-color: var(--vwp-bg-tile); }
+.vwp-controls-bg { background-color: rgba(0, 0, 0, 0.8); }
 .vwp-border { border-color: var(--vwp-border); }
 .vwp-text-primary { color: var(--vwp-text-primary); }
 .vwp-text-secondary { color: var(--vwp-text-secondary); }
@@ -92,4 +109,54 @@
   border-color: transparent var(--vwp-accent) transparent transparent;
   opacity: 0.8;
   pointer-events: none;
+}
+
+.theme-glass .vwp-bg-sidebar,
+.theme-glass .vwp-bg-tile,
+.theme-glass .vwp-bg-main,
+.theme-glass .vwp-controls-bg {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.theme-glass .vwp-bg-sidebar,
+.theme-glass .vwp-controls-bg {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+}
+
+.theme-glass .vwp-bg-sidebar {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.theme-glass .vwp-bg-tile {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.theme-glass .wall-tile:hover {
+  transform: translateY(-4px) scale(1.01);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.theme-glass .vwp-accent {
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
+.theme-glass .vwp-bg-main {
+  background: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #000000 100%);
+}
+
+.theme-glass ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 100px;
+}
+
+.theme-glass ::-webkit-scrollbar-track {
+  background: transparent;
 }

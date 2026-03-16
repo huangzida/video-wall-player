@@ -13,6 +13,6 @@ export interface VideoWallResource {
   poster?: string;
 }
 
-export type VideoWallTheme = 'default' | 'cyberpunk' | 'industrial' | 'minimalist';
+export type VideoWallTheme = 'default' | 'cyberpunk' | 'industrial' | 'minimalist' | 'glass';
 
 export type VideoWallControlSize = 'small' | 'normal' | 'large';
