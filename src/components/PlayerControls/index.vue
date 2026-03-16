@@ -286,6 +286,7 @@ onUnmounted(() => {
         class="flex items-center justify-center cursor-pointer hover:bg-blue-500 hover:text-white rounded-full transition-all active:scale-90 mx-1"
         :class="sizeClasses.button"
         @click="handlePlayPause"
+        title="Play/Pause (Space)"
       >
         <Pause v-if="isPlaying" class="fill-current" :class="sizeClasses.playIcon" />
         <Play v-else class="fill-current" :class="sizeClasses.playIcon" />
@@ -371,7 +372,7 @@ onUnmounted(() => {
     <!-- Right Controls -->
     <div class="flex items-center gap-2">
       <!-- Rate -->
-      <div v-if="showPlaybackRate" class="relative group/rate">
+      <div v-if="showPlaybackRate" class="relative group/rate" title="Playback Speed">
         <div class="px-3 py-1.5 flex items-center justify-center bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 hover:text-white transition-colors border border-white/5" @click="handleRateClick">
           <span class="font-bold tracking-wider" :class="sizeClasses.text">{{ playbackRate }}×</span>
         </div>
@@ -389,7 +390,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Volume -->
-      <div class="relative flex items-center" @mouseenter="handleVolumeMouseEnter" @mouseleave="handleVolumeMouseLeave">
+      <div class="relative flex items-center" @mouseenter="handleVolumeMouseEnter" @mouseleave="handleVolumeMouseLeave" title="Volume (M)">
         <div
           class="flex items-center justify-center rounded-full cursor-pointer hover:bg-white/10 hover:text-white text-gray-400 transition-colors"
           :class="sizeClasses.button"
@@ -428,6 +429,7 @@ onUnmounted(() => {
         class="flex items-center justify-center rounded-full cursor-pointer text-gray-400 hover:bg-red-500/20 hover:text-red-500 transition-all active:scale-90"
         :class="sizeClasses.button"
         @click="handleStopPlay"
+        title="Stop"
       >
         <X :class="sizeClasses.icon" />
       </div>
@@ -437,6 +439,7 @@ onUnmounted(() => {
         class="flex items-center justify-center rounded-full cursor-pointer text-gray-400 hover:bg-white/10 hover:text-white transition-all active:scale-90"
         :class="sizeClasses.button"
         @click="handleFullscreen"
+        title="Fullscreen (F)"
       >
         <Maximize :class="sizeClasses.icon" />
       </div>

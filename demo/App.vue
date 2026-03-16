@@ -31,6 +31,7 @@ const theme = useStorage<VideoWallTheme>('demo-theme', 'default');
 const draggable = useStorage('demo-draggable', true);
 const showTileTitle = useStorage('demo-show-tile-title', true);
 const showTileMute = useStorage('demo-show-tile-mute', true);
+const showTileFullscreen = useStorage('demo-show-tile-fullscreen', true);
 const showSidebar = useStorage('demo-show-sidebar', true);
 const showPrevNextChunk = useStorage('demo-show-prev-next-chunk', true);
 const showStepSkip = useStorage('demo-show-step-skip', true);
@@ -69,6 +70,7 @@ const showSettings = ref(false);
       :draggable="draggable"
       :show-tile-title="showTileTitle"
       :show-tile-mute="showTileMute"
+      :show-tile-fullscreen="showTileFullscreen"
       :show-sidebar="showSidebar"
       :tags="tags"
       :show-prev-next-chunk="showPrevNextChunk"
@@ -207,6 +209,10 @@ const showSettings = ref(false);
         <div class="flex items-center justify-between">
           <label>Tile Mute</label>
           <input type="checkbox" v-model="showTileMute" class="w-4 h-4 accent-blue-500" />
+        </div>
+        <div class="flex items-center justify-between">
+          <label>Tile Fullscreen</label>
+          <input type="checkbox" v-model="showTileFullscreen" class="w-4 h-4 accent-blue-500" />
         </div>
         <div class="flex items-center justify-between">
           <label>Fixed Tile Meta</label>

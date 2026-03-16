@@ -73,6 +73,7 @@ const resources = [
 | `draggable` | `boolean` | `true` | 是否启用拖拽排序。 |
 | `showTileTitle` | `boolean` | `true` | 是否显示视频格子的标题浮层。 |
 | `showTileMute` | `boolean` | `true` | 是否显示视频格子的静音按钮。 |
+| `showTileFullscreen` | `boolean` | `true` | 是否显示视频格子的全屏按钮。 |
 | `showSidebar` | `boolean` | `true` | 是否显示侧边栏。 |
 | `showPrevNextChunk` | `boolean` | `true` | 是否显示上一个/下一个片段按钮。 |
 | `showStepSkip` | `boolean` | `true` | 是否显示快退/快进按钮。 |

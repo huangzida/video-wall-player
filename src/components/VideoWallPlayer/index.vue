@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch, onMounted } from "vue";
 import { useFullscreen, onKeyStroke } from "@vueuse/core";
-import { AudioLines, Volume2, VolumeX } from "lucide-vue-next";
+import { AudioLines, Volume2, VolumeX, AlertCircle, RefreshCw, Maximize2 } from "lucide-vue-next";
 import PlayerControls from "../PlayerControls/index.vue";
 import { useVideoWallLayout } from "../../hooks/useVideoWallLayout";
 import { formatTime, PLAYBACK_RATE_LEVELS } from "../../utils";
@@ -26,6 +26,7 @@ const props = withDefaults(
     draggable?: boolean;
     showTileTitle?: boolean;
     showTileMute?: boolean;
+    showTileFullscreen?: boolean;
     showSidebar?: boolean;
     tags?: VideoWallTag[];
     showPrevNextChunk?: boolean;
@@ -53,6 +54,7 @@ const props = withDefaults(
     draggable: true,
     showTileTitle: true,
     showTileMute: true,
+    showTileFullscreen: true,
     showSidebar: true,
     tags: () => [],
     showPrevNextChunk: true,
@@ -77,6 +79,8 @@ const currentTime = ref(0);
 const playbackRate = ref(1);
 const volume = ref(50);
 const individualMutedStates = ref<Record<string, boolean>>({});
+const bufferingStates = ref<Record<string, boolean>>({});
+const errorStates = ref<Record<string, boolean>>({});
 
 const wallRef = ref<HTMLElement>();
 const mediaRefs = ref<Record<string, HTMLMediaElement>>({});
@@ -118,6 +122,40 @@ onMounted(() => {
     }, 500);
   }
 });
+
+// Media Event Handlers
+function handleWaiting(id: string) {
+  bufferingStates.value[id] = true;
+}
+
+function handlePlaying(id: string) {
+  bufferingStates.value[id] = false;
+  errorStates.value[id] = false;
+}
+
+function handleError(id: string) {
+  bufferingStates.value[id] = false;
+  errorStates.value[id] = true;
+  emit("error", `Error loading video: ${id}`);
+}
+
+function handleRetry(id: string) {
+  errorStates.value[id] = false;
+  const media = mediaRefs.value[id];
+  if (media) {
+    media.load();
+    if (isPlaying.value) {
+      media.play().catch(() => {});
+    }
+  }
+}
+
+function handleSingleFullscreen(id: string) {
+  const el = document.querySelector(`[data-tile-id="${id}"]`);
+  if (el && el.requestFullscreen) {
+    el.requestFullscreen().catch(() => {});
+  }
+}
 
 const effectiveLayoutMode = computed(() => {
   if (focusedResourceId.value) return "1x1";
@@ -624,9 +662,19 @@ defineExpose({
           :style="gridStyle"
           class="mx-auto my-auto transition-all duration-500 ease-out"
         >
+          <!-- Empty State -->
+          <div
+            v-if="localResources.length === 0"
+            class="absolute inset-0 flex flex-col items-center justify-center text-gray-500"
+          >
+            <AlertCircle class="w-16 h-16 mb-4 opacity-20" />
+            <span class="text-lg font-medium opacity-40 tracking-widest uppercase">No Signal</span>
+          </div>
+
           <div
             v-for="(item, index) in localResources"
             :key="item.id"
+            :data-tile-id="item.id"
             class="wall-tile relative overflow-hidden vwp-bg-tile vwp-border border transition-all duration-300 group vwp-radius"
             :class="[
               draggable ? 'cursor-grab active:cursor-grabbing' : '',
@@ -658,6 +706,10 @@ defineExpose({
               @play="
                 item.id === primaryId ? syncIsPlayingFromPrimary() : undefined
               "
+              @playing="handlePlaying(item.id)"
+              @waiting="handleWaiting(item.id)"
+              @canplay="handlePlaying(item.id)"
+              @error="handleError(item.id)"
               @pause="
                 item.id === primaryId ? syncIsPlayingFromPrimary() : undefined
               "
@@ -678,6 +730,10 @@ defineExpose({
               @play="
                 item.id === primaryId ? syncIsPlayingFromPrimary() : undefined
               "
+              @playing="handlePlaying(item.id)"
+              @waiting="handleWaiting(item.id)"
+              @canplay="handlePlaying(item.id)"
+              @error="handleError(item.id)"
               @pause="
                 item.id === primaryId ? syncIsPlayingFromPrimary() : undefined
               "
@@ -703,7 +759,7 @@ defineExpose({
             <!-- Meta Overlay -->
             <div
               v-if="showTileTitle"
-              class="absolute left-0 top-0 right-0 p-3 transition-opacity duration-200 bg-gradient-to-b from-black/80 to-transparent pointer-events-none"
+              class="absolute left-0 top-0 right-0 p-3 transition-opacity duration-200 bg-gradient-to-b from-black/80 to-transparent pointer-events-none flex justify-between items-start"
               :class="
                 fixedTileMeta
                   ? 'opacity-100'
@@ -716,7 +772,7 @@ defineExpose({
                 <div
                   class="w-1.5 h-1.5 rounded-full"
                   :class="
-                    isPlaying ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
+                    isPlaying && !bufferingStates[item.id] && !errorStates[item.id] ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
                   "
                 ></div>
                 <span
@@ -724,6 +780,16 @@ defineExpose({
                   >{{ item.name || item.id }}</span
                 >
               </div>
+
+              <!-- Single Fullscreen Button -->
+              <button 
+                v-if="showTileFullscreen"
+                class="pointer-events-auto p-1.5 rounded-full bg-black/40 text-white/70 hover:text-white hover:bg-white/10 transition-colors border border-white/5 backdrop-blur-md"
+                title="Fullscreen this tile"
+                @click.stop="handleSingleFullscreen(item.id)"
+              >
+                <Maximize2 class="w-3.5 h-3.5" />
+              </button>
             </div>
 
             <!-- Mute Button -->
@@ -744,14 +810,30 @@ defineExpose({
               <Volume2 v-else class="w-3.5 h-3.5" />
             </div>
 
-            <!-- Loading/Empty State Placeholder -->
+            <!-- Loading/Buffering State -->
             <div
-              v-if="!item.chunkUrls[activeChunkIndex]"
-              class="absolute inset-0 flex items-center justify-center vwp-bg-main"
+              v-if="!item.chunkUrls[activeChunkIndex] || bufferingStates[item.id]"
+              class="absolute inset-0 flex items-center justify-center vwp-bg-main bg-black/20 backdrop-blur-[1px] z-20 pointer-events-none"
             >
               <div
                 class="w-8 h-8 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin"
               ></div>
+            </div>
+
+            <!-- Error State -->
+            <div
+              v-if="errorStates[item.id]"
+              class="absolute inset-0 flex flex-col items-center justify-center vwp-bg-main bg-black/80 z-30 gap-3"
+            >
+              <AlertCircle class="w-8 h-8 text-red-500" />
+              <span class="text-xs text-gray-400">Video Load Failed</span>
+              <button 
+                class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-white/10 hover:bg-white/20 rounded-full transition-colors border border-white/5"
+                @click.stop="handleRetry(item.id)"
+              >
+                <RefreshCw class="w-3 h-3" />
+                Retry
+              </button>
             </div>
           </div>
         </div>

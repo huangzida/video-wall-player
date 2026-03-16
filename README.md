@@ -73,6 +73,7 @@ const resources = [
 | `draggable` | `boolean` | `true` | Whether to enable drag and drop reordering. |
 | `showTileTitle` | `boolean` | `true` | Whether to show title overlay on video tiles. |
 | `showTileMute` | `boolean` | `true` | Whether to show mute button on video tiles. |
+| `showTileFullscreen` | `boolean` | `true` | Whether to show fullscreen button on video tiles. |
 | `showSidebar` | `boolean` | `true` | Whether to show the sidebar. |
 | `showPrevNextChunk` | `boolean` | `true` | Whether to show prev/next chunk buttons. |
 | `showStepSkip` | `boolean` | `true` | Whether to show step backward/forward buttons. |
