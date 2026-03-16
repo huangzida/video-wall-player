@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch, onMounted } from "vue";
-import { useFullscreen } from "@vueuse/core";
+import { useFullscreen, onKeyStroke } from "@vueuse/core";
 import { AudioLines, Volume2, VolumeX } from "lucide-vue-next";
 import PlayerControls from "../PlayerControls/index.vue";
 import { useVideoWallLayout } from "../../hooks/useVideoWallLayout";
 import { formatTime, PLAYBACK_RATE_LEVELS } from "../../utils";
-import type { VideoWallResource, VideoWallTag, VideoWallTheme, VideoWallControlSize } from "./types";
+import type { VideoWallResource, VideoWallTag, VideoWallTheme, VideoWallControlSize, VideoWallLayoutMode } from "./types";
 
 defineOptions({ name: "VideoWallPlayer" });
 
@@ -22,6 +22,7 @@ const props = withDefaults(
     objectFit?: "contain" | "cover" | "fill";
     theme?: VideoWallTheme;
     controlSize?: VideoWallControlSize;
+    layoutMode?: VideoWallLayoutMode;
     draggable?: boolean;
     showTileTitle?: boolean;
     showTileMute?: boolean;
@@ -48,6 +49,7 @@ const props = withDefaults(
     objectFit: "contain",
     theme: "default",
     controlSize: "normal",
+    layoutMode: "auto",
     draggable: true,
     showTileTitle: true,
     showTileMute: true,
@@ -85,6 +87,7 @@ const showPerTileMeta = computed(() => itemCount.value > 1);
 const canReorderWall = computed(() => itemCount.value > 1);
 
 const primaryResourceId = ref("");
+const focusedResourceId = ref("");
 const draggingId = ref("");
 const dragOverId = ref("");
 
@@ -116,11 +119,17 @@ onMounted(() => {
   }
 });
 
+const effectiveLayoutMode = computed(() => {
+  if (focusedResourceId.value) return "1x1";
+  return props.layoutMode;
+});
+
 const { containerRef, layout } = useVideoWallLayout(
   itemCount,
   computed(() => ({
     aspectRatio: props.aspectRatio,
     gap: props.gap,
+    layoutMode: effectiveLayoutMode.value,
   }))
 );
 
@@ -133,12 +142,14 @@ const gridStyle = computed(() => ({
   alignContent: "center",
   width: "100%",
   height: "100%",
+  gridAutoFlow: "dense", // Enable dense packing for 1+5/1+7 modes
 }));
 
-const itemStyle = computed(() => ({
+// itemStyle is now dynamic via layout.getItemStyle(index)
+const baseItemStyle = {
   width: "100%",
   height: "100%",
-}));
+};
 
 const { toggle: toggleFullscreen } = useFullscreen(wallRef);
 
@@ -483,6 +494,65 @@ const handleSegmentClick = (index: number) => {
   void switchChunk(index, 0, true);
 };
 
+const handleTileDoubleClick = (id: string) => {
+  if (focusedResourceId.value === id) {
+    focusedResourceId.value = "";
+  } else {
+    focusedResourceId.value = id;
+  }
+};
+
+// Keyboard Shortcuts
+onKeyStroke([" ", "k", "K"], (e) => {
+  if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  handlePlayPause();
+});
+
+onKeyStroke(["f", "F"], (e) => {
+  if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  toggleFullscreen();
+});
+
+onKeyStroke(["m", "M"], (e) => {
+  if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  handleVolumeToggle();
+});
+
+onKeyStroke("Escape", (e) => {
+  if (focusedResourceId.value) {
+    e.preventDefault();
+    focusedResourceId.value = "";
+  }
+  // Let default Escape behavior handle fullscreen exit if not focused
+});
+
+onKeyStroke("ArrowLeft", (e) => {
+  if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  handleStepBack(props.stepSeconds);
+});
+
+onKeyStroke("ArrowRight", (e) => {
+  if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  handleStepForward(props.stepSeconds);
+});
+
+onKeyStroke("ArrowUp", (e) => {
+  if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  handleVolumeChange(Math.min(100, volume.value + 10));
+});
+
+onKeyStroke("ArrowDown", (e) => {
+  if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  handleVolumeChange(Math.max(0, volume.value - 10));
+});
+
 defineExpose({
   play: playAllVideos,
   pause: pauseAllVideos,
@@ -555,7 +625,7 @@ defineExpose({
           class="mx-auto my-auto transition-all duration-500 ease-out"
         >
           <div
-            v-for="item in localResources"
+            v-for="(item, index) in localResources"
             :key="item.id"
             class="wall-tile relative overflow-hidden vwp-bg-tile vwp-border border transition-all duration-300 group vwp-radius"
             :class="[
@@ -567,12 +637,14 @@ defineExpose({
                 ? 'ring-2 ring-blue-500 scale-[1.02] z-10'
                 : '',
             ]"
-            :style="itemStyle"
-            :draggable="draggable"
+            :style="layout.getItemStyle(index)"
+            :draggable="draggable && !focusedResourceId"
+            v-show="!focusedResourceId || item.id === focusedResourceId"
             @dragstart="handleTileDragStart($event, item.id)"
             @dragover="handleTileDragOver($event, item.id)"
             @drop="handleTileDrop($event, item.id)"
             @dragend="handleTileDragEnd"
+            @dblclick="handleTileDoubleClick(item.id)"
           >
             <!-- Media Element -->
             <audio

@@ -2,7 +2,7 @@
 import { ref, watch, computed } from 'vue';
 import { useStorage } from '@vueuse/core';
 import { VideoWallPlayer } from '../src/index';
-import type { VideoWallTag, VideoWallTheme, VideoWallControlSize } from '../src/components/VideoWallPlayer/types';
+import type { VideoWallTag, VideoWallTheme, VideoWallControlSize, VideoWallLayoutMode } from '../src/components/VideoWallPlayer/types';
 
 // const testUrl = '//sf1-cdn-tos.huoshanstatic.com/obj/media-fe/xgplayer_doc_video/mp4/xgplayer-demo-360p.mp4';
 // const testDuration = 90;
@@ -42,6 +42,7 @@ const controlSize = useStorage<VideoWallControlSize>('demo-control-size', 'norma
 const sidebarWidth = useStorage('demo-sidebar-width', 280);
 const videoWallPadding = useStorage('demo-video-wall-padding', 10);
 const videoCount = useStorage('demo-video-count', 4);
+const layoutMode = useStorage<VideoWallLayoutMode>('demo-layout-mode', 'auto');
 
 const tags = ref<VideoWallTag[]>([
   { time: 10, name: 'Intro End', color: '#ef4444' },
@@ -79,6 +80,7 @@ const showSettings = ref(false);
       :control-size="controlSize"
       :sidebar-width="sidebarWidth"
       :video-wall-padding="videoWallPadding"
+      :layout-mode="layoutMode"
     />
 
     <!-- Settings Toggle -->
@@ -256,6 +258,21 @@ const showSettings = ref(false);
         </div>
 
         <h4 class="font-bold mt-4 mb-2 text-sm border-b border-gray-700 pb-1">Layout</h4>
+        <div class="space-y-1">
+          <label class="text-sm text-gray-400 block">Layout Mode</label>
+          <select
+            v-model="layoutMode"
+            class="w-full bg-gray-800 border border-gray-700 rounded p-2 text-sm focus:outline-none focus:border-blue-500"
+          >
+            <option value="auto">Auto (Responsive)</option>
+            <option value="1x1">1x1 (Single)</option>
+            <option value="2x2">2x2 (Grid)</option>
+            <option value="3x3">3x3 (Grid)</option>
+            <option value="4x4">4x4 (Grid)</option>
+            <option value="1+5">1+5 (Focus)</option>
+            <option value="1+7">1+7 (Focus)</option>
+          </select>
+        </div>
         <div class="space-y-1">
           <div class="flex justify-between text-sm text-gray-400">
             <label>Sidebar Width</label>

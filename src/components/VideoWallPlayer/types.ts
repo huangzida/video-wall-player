@@ -16,3 +16,5 @@ export interface VideoWallResource {
 export type VideoWallTheme = 'default' | 'cyberpunk' | 'industrial' | 'minimalist' | 'glass';
 
 export type VideoWallControlSize = 'small' | 'normal' | 'large';
+
+export type VideoWallLayoutMode = 'auto' | '1x1' | '2x2' | '3x3' | '4x4' | '1+5' | '1+7';

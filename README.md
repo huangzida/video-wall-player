@@ -12,6 +12,7 @@ A powerful Vue 3 component for playing synchronized video streams in a responsiv
 - 🎥 **Multi-stream Sync**: Synchronize multiple video/audio streams based on a primary stream.
 - 🧩 **Responsive Grid**: Automatically calculates optimal grid layout based on stream count and container size.
 - 🖱️ **Drag & Drop**: Reorder video tiles with drag and drop support.
+- 🔍 **Spotlight Focus**: Double-click any video tile to maximize it and focus on that stream.
 - 🔊 **Audio Support**: Handles both video and audio chunks (.wav support).
 - 🎛️ **Advanced Controls**: Playback speed, seeking, volume control, fullscreen.
 - 🎨 **Tailwind CSS**: Styled with Tailwind CSS for easy customization.
@@ -82,6 +83,7 @@ const resources = [
 | `controlSize` | `'small' \| 'normal' \| 'large'` | `'normal'` | Size of the bottom control bar (icons and text). |
 | `sidebarWidth` | `number` | `280` | Width of the sidebar in pixels. |
 | `videoWallPadding` | `number` | `10` | Padding inside the right-side video wall area in pixels. |
+| `layoutMode` | `'auto' \| '1x1' \| '2x2' \| '3x3' \| '4x4' \| '1+5' \| '1+7'` | `'auto'` | Grid layout mode. 'auto' calculates based on count. Others are fixed or focus layouts. |
 | `tags` | `VideoWallTag[]` | `[]` | List of timeline tags. |
 
 ### VideoWallResource Interface
@@ -123,6 +125,20 @@ You can access these methods via template ref:
 | `play` | - | Resumes playback for all videos. |
 | `pause` | - | Pauses playback for all videos. |
 | `seek` | `time: number` | Seeks all videos to the specified time (in seconds). |
+
+## Keyboard Shortcuts
+
+| Key | Action |
+| --- | --- |
+| `Space` / `k` | Toggle Play/Pause |
+| `f` | Toggle Fullscreen |
+| `m` | Toggle Mute |
+| `ArrowLeft` | Step Backward (default 5s) |
+| `ArrowRight` | Step Forward (default 5s) |
+| `ArrowUp` | Volume Up (+10%) |
+| `ArrowDown` | Volume Down (-10%) |
+| `Esc` | Exit Fullscreen / Exit Focus Mode |
+| `Double Click` | Toggle Focus Mode (Spotlight) on a tile |
 
 ## License
 
