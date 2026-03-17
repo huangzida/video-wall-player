@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, computed } from 'vue';
 import { useStorage } from '@vueuse/core';
-import { VideoWallPlayer } from '../src/index';
+import { VideoWallPlayer } from '../dist/index.mjs';
+import DemoSettings from './components/DemoSettings.vue';
 import type { VideoWallTag, VideoWallTheme, VideoWallControlSize, VideoWallLayoutMode } from '../src/components/VideoWallPlayer/types';
 
 // const testUrl = '//sf1-cdn-tos.huoshanstatic.com/obj/media-fe/xgplayer_doc_video/mp4/xgplayer-demo-360p.mp4';
@@ -50,14 +51,12 @@ const tags = ref<VideoWallTag[]>([
   { time: 25, name: 'Action Start', color: '#3b82f6' },
   { time: 40, name: 'Climax', color: '#10b981' },
 ]);
-
-const showSettings = ref(false);
 </script>
 
 <template>
-  <div class="w-screen h-screen overflow-hidden relative bg-black">
+  <div class="demo-root">
     <VideoWallPlayer
-      :resources="resources"
+      :resources="resources as any"
       title="Demo Wall"
       :autoplay="autoplay"
       :muted="muted"
@@ -72,7 +71,7 @@ const showSettings = ref(false);
       :show-tile-mute="showTileMute"
       :show-tile-fullscreen="showTileFullscreen"
       :show-sidebar="showSidebar"
-      :tags="tags"
+      :tags="tags as any"
       :show-prev-next-chunk="showPrevNextChunk"
       :show-step-skip="showStepSkip"
       :show-playback-rate="showPlaybackRate"
@@ -85,227 +84,31 @@ const showSettings = ref(false);
       :layout-mode="layoutMode"
     />
 
-    <!-- Settings Toggle -->
-    <button
-      class="absolute top-4 right-4 z-50 bg-gray-800 text-white px-3 py-2 rounded hover:bg-gray-700 shadow border border-gray-600 transition-colors"
-      @click="showSettings = !showSettings"
-    >
-      ⚙️ Settings
-    </button>
-
-    <!-- Settings Panel -->
-    <div
-      v-if="showSettings"
-      class="absolute top-16 right-4 z-50 bg-gray-900/90 text-white p-4 rounded-lg shadow-xl w-72 backdrop-blur-sm border border-gray-700 max-h-[calc(100vh-5rem)] overflow-y-auto custom-scrollbar"
-    >
-      <h3 class="font-bold mb-4 text-lg border-b border-gray-700 pb-2">Configuration</h3>
-
-      <div class="space-y-4">
-        <div class="flex items-center justify-between">
-          <label>Autoplay</label>
-          <input type="checkbox" v-model="autoplay" class="w-4 h-4 accent-blue-500" />
-        </div>
-
-        <div class="flex items-center justify-between">
-          <label>Muted (Initial)</label>
-          <input type="checkbox" v-model="muted" class="w-4 h-4 accent-blue-500" />
-        </div>
-
-        <div class="flex items-center justify-between">
-          <label>Loop</label>
-          <input type="checkbox" v-model="loop" class="w-4 h-4 accent-blue-500" />
-        </div>
-
-        <div class="flex items-center justify-between">
-          <label>Show Controls</label>
-          <input type="checkbox" v-model="showControls" class="w-4 h-4 accent-blue-500" />
-        </div>
-
-        <div class="space-y-1">
-          <div class="flex justify-between text-sm text-gray-400">
-            <label>Video Count</label>
-            <span>{{ videoCount }}</span>
-          </div>
-          <input
-            type="range"
-            v-model.number="videoCount"
-            min="1"
-            max="25"
-            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-          />
-        </div>
-
-        <div class="space-y-1">
-          <div class="flex justify-between text-sm text-gray-400">
-            <label>Gap</label>
-            <span>{{ gap }}px</span>
-          </div>
-          <input
-            type="range"
-            v-model.number="gap"
-            min="0"
-            max="32"
-            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-          />
-        </div>
-
-        <div class="space-y-1">
-          <label class="text-sm text-gray-400 block">Aspect Ratio</label>
-          <select
-            v-model.number="aspectRatio"
-            class="w-full bg-gray-800 border border-gray-700 rounded p-2 text-sm focus:outline-none focus:border-blue-500"
-          >
-            <option :value="16 / 9">16:9 (Landscape)</option>
-            <option :value="4 / 3">4:3 (SD)</option>
-            <option :value="1">1:1 (Square)</option>
-            <option :value="9 / 16">9:16 (Portrait)</option>
-          </select>
-        </div>
-
-        <div class="space-y-1">
-          <label class="text-sm text-gray-400 block">Theme</label>
-          <select
-            v-model="theme"
-            class="w-full bg-gray-800 border border-gray-700 rounded p-2 text-sm focus:outline-none focus:border-blue-500"
-          >
-            <option value="default">Default (Classic Dark)</option>
-            <option value="cyberpunk">Cyberpunk (Sci-Fi)</option>
-            <option value="industrial">Industrial (Brutalist)</option>
-            <option value="minimalist">Minimalist (Clean)</option>
-            <option value="glass">Glass (Futuristic)</option>
-          </select>
-        </div>
-
-        <div class="space-y-1">
-          <label class="text-sm text-gray-400 block">Object Fit</label>
-          <select
-            v-model="objectFit"
-            class="w-full bg-gray-800 border border-gray-700 rounded p-2 text-sm focus:outline-none focus:border-blue-500"
-          >
-            <option value="contain">Contain</option>
-            <option value="cover">Cover</option>
-            <option value="fill">Fill</option>
-          </select>
-        </div>
-
-        <div class="text-xs text-gray-500 mt-4 italic">
-          Note: Autoplay/Muted changes may require reload to take effect fully.
-        </div>
-
-        <h4 class="font-bold mt-4 mb-2 text-sm border-b border-gray-700 pb-1">UI Toggles</h4>
-        
-        <div class="flex items-center justify-between">
-          <label>Show Sidebar</label>
-          <input type="checkbox" v-model="showSidebar" class="w-4 h-4 accent-blue-500" />
-        </div>
-        <div class="flex items-center justify-between">
-          <label>Draggable</label>
-          <input type="checkbox" v-model="draggable" class="w-4 h-4 accent-blue-500" />
-        </div>
-        <div class="flex items-center justify-between">
-          <label>Tile Title</label>
-          <input type="checkbox" v-model="showTileTitle" class="w-4 h-4 accent-blue-500" />
-        </div>
-        <div class="flex items-center justify-between">
-          <label>Tile Mute</label>
-          <input type="checkbox" v-model="showTileMute" class="w-4 h-4 accent-blue-500" />
-        </div>
-        <div class="flex items-center justify-between">
-          <label>Tile Fullscreen</label>
-          <input type="checkbox" v-model="showTileFullscreen" class="w-4 h-4 accent-blue-500" />
-        </div>
-        <div class="flex items-center justify-between">
-          <label>Fixed Tile Meta</label>
-          <input type="checkbox" v-model="fixedTileMeta" class="w-4 h-4 accent-blue-500" />
-        </div>
-
-        <h4 class="font-bold mt-4 mb-2 text-sm border-b border-gray-700 pb-1">Controls</h4>
-
-        <div class="flex items-center justify-between">
-          <label>Prev/Next Chunk</label>
-          <input type="checkbox" v-model="showPrevNextChunk" class="w-4 h-4 accent-blue-500" />
-        </div>
-        <div class="flex items-center justify-between">
-          <label>Step Skip</label>
-          <input type="checkbox" v-model="showStepSkip" class="w-4 h-4 accent-blue-500" />
-        </div>
-        <div class="flex items-center justify-between">
-          <label>Playback Rate</label>
-          <input type="checkbox" v-model="showPlaybackRate" class="w-4 h-4 accent-blue-500" />
-        </div>
-        <div class="flex items-center justify-between">
-          <label>Speed Control (Rewind/FF)</label>
-          <input type="checkbox" v-model="showSpeedControl" class="w-4 h-4 accent-blue-500" />
-        </div>
-        <div class="space-y-1">
-          <div class="flex justify-between text-sm text-gray-400">
-            <label>Step Seconds</label>
-            <span>{{ stepSeconds }}s</span>
-          </div>
-          <input
-            type="range"
-            v-model.number="stepSeconds"
-            min="1"
-            max="30"
-            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-          />
-        </div>
-
-        <div class="space-y-1">
-          <label class="text-sm text-gray-400 block">Control Size</label>
-          <select
-            v-model="controlSize"
-            class="w-full bg-gray-800 border border-gray-700 rounded p-2 text-sm focus:outline-none focus:border-blue-500"
-          >
-            <option value="small">Small</option>
-            <option value="normal">Normal</option>
-            <option value="large">Large</option>
-          </select>
-        </div>
-
-        <h4 class="font-bold mt-4 mb-2 text-sm border-b border-gray-700 pb-1">Layout</h4>
-        <div class="space-y-1">
-          <label class="text-sm text-gray-400 block">Layout Mode</label>
-          <select
-            v-model="layoutMode"
-            class="w-full bg-gray-800 border border-gray-700 rounded p-2 text-sm focus:outline-none focus:border-blue-500"
-          >
-            <option value="auto">Auto (Responsive)</option>
-            <option value="1x1">1x1 (Single)</option>
-            <option value="2x2">2x2 (Grid)</option>
-            <option value="3x3">3x3 (Grid)</option>
-            <option value="4x4">4x4 (Grid)</option>
-            <option value="1+5">1+5 (Focus)</option>
-            <option value="1+7">1+7 (Focus)</option>
-          </select>
-        </div>
-        <div class="space-y-1">
-          <div class="flex justify-between text-sm text-gray-400">
-            <label>Sidebar Width</label>
-            <span>{{ sidebarWidth }}px</span>
-          </div>
-          <input
-            type="range"
-            v-model.number="sidebarWidth"
-            min="200"
-            max="500"
-            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-          />
-        </div>
-        <div class="space-y-1">
-          <div class="flex justify-between text-sm text-gray-400">
-            <label>Video Wall Padding</label>
-            <span>{{ videoWallPadding }}px</span>
-          </div>
-          <input
-            type="range"
-            v-model.number="videoWallPadding"
-            min="0"
-            max="50"
-            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-          />
-        </div>
-      </div>
-    </div>
+    <DemoSettings
+      v-model:autoplay="autoplay"
+      v-model:muted="muted"
+      v-model:loop="loop"
+      v-model:show-controls="showControls"
+      v-model:aspect-ratio="aspectRatio"
+      v-model:gap="gap"
+      v-model:object-fit="objectFit"
+      v-model:theme="theme"
+      v-model:draggable="draggable"
+      v-model:show-tile-title="showTileTitle"
+      v-model:show-tile-mute="showTileMute"
+      v-model:show-tile-fullscreen="showTileFullscreen"
+      v-model:show-sidebar="showSidebar"
+      v-model:show-prev-next-chunk="showPrevNextChunk"
+      v-model:show-step-skip="showStepSkip"
+      v-model:show-playback-rate="showPlaybackRate"
+      v-model:show-speed-control="showSpeedControl"
+      v-model:fixed-tile-meta="fixedTileMeta"
+      v-model:step-seconds="stepSeconds"
+      v-model:control-size="controlSize"
+      v-model:sidebar-width="sidebarWidth"
+      v-model:video-wall-padding="videoWallPadding"
+      v-model:video-count="videoCount"
+      v-model:layout-mode="layoutMode"
+    />
   </div>
 </template>

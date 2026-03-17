@@ -1,11 +1,13 @@
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import dts from 'vite-plugin-dts';
+import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 
 export default defineConfig({
   plugins: [
     vue(),
+    cssInjectedByJsPlugin(),
     dts({
       tsconfigPath: './tsconfig.json',
       outDir: 'dist/types',
@@ -18,11 +20,10 @@ export default defineConfig({
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'VideoWallPlayer',
       fileName: (format) => {
-        if (format === 'es') return 'es/index.js';
-        if (format === 'cjs') return 'lib/index.js';
+        if (format === 'es') return 'index.mjs';
         return `index.${format}.js`;
       },
-      formats: ['es', 'cjs']
+      formats: ['es']
     },
     rollupOptions: {
       external: ['vue', '@vueuse/core', 'lucide-vue-next'],

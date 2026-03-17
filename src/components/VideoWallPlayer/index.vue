@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch, onMounted } from "vue";
+import type { ComponentPublicInstance } from "vue";
 import { useFullscreen, onKeyStroke } from "@vueuse/core";
 import { AudioLines, Volume2, VolumeX, AlertCircle, RefreshCw, Maximize2 } from "lucide-vue-next";
 import PlayerControls from "../PlayerControls/index.vue";
@@ -100,12 +101,12 @@ const localResources = ref<VideoWallResource[]>([]);
 
 watch(
   () => props.resources,
-  (newResources) => {
+  (newResources: VideoWallResource[]) => {
     localResources.value = [...newResources];
 
     if (newResources.length > 0) {
       if (props.muted) {
-        newResources.forEach((item) => {
+        newResources.forEach((item: VideoWallResource) => {
           individualMutedStates.value[item.id] = true;
         });
       }
@@ -196,13 +197,16 @@ const primaryResource = computed(() => localResources.value[0]);
 const segmentDurations = computed(() => primaryResource.value?.durations || []);
 
 const duration = computed(() =>
-  segmentDurations.value.reduce((sum, item) => sum + Math.max(0, item || 0), 0)
+  segmentDurations.value.reduce(
+    (sum: number, item: number | undefined) => sum + Math.max(0, item || 0),
+    0
+  )
 );
 
 const segmentStarts = computed(() => {
   const starts: number[] = [];
   let total = 0;
-  segmentDurations.value.forEach((item) => {
+  segmentDurations.value.forEach((item: number | undefined) => {
     starts.push(total);
     total += Math.max(0, item || 0);
   });
@@ -214,9 +218,9 @@ const primaryId = computed(
 );
 
 const isMuted = computed(() => {
-  const allIds = localResources.value.map((item) => item.id);
+  const allIds = localResources.value.map((item: VideoWallResource) => item.id);
   if (allIds.length === 0) return false;
-  return allIds.every((id) => individualMutedStates.value[id]);
+  return allIds.every((id: string) => individualMutedStates.value[id]);
 });
 
 const segmentList = computed(() => {
@@ -253,14 +257,26 @@ function setMediaRef(id: string, el: HTMLMediaElement | null) {
   mediaRefs.value[id] = el;
 }
 
+function setMediaVNodeRef(id: string) {
+  return (el: Element | ComponentPublicInstance | null) => {
+    if (el && el instanceof HTMLMediaElement) {
+      setMediaRef(id, el);
+      return;
+    }
+    setMediaRef(id, null);
+  };
+}
+
 watch(
   localResources,
-  (next) => {
+  (next: VideoWallResource[]) => {
     if (next.length === 0) {
       primaryResourceId.value = "";
       return;
     }
-    const hasPrimary = next.some((item) => item.id === primaryResourceId.value);
+    const hasPrimary = next.some(
+      (item: VideoWallResource) => item.id === primaryResourceId.value
+    );
     if (!hasPrimary) {
       primaryResourceId.value = next[0]?.id || "";
     }
@@ -333,7 +349,7 @@ function handleTileDragEnd() {
 
 // Playback Logic
 function applyVideoSettings() {
-  localResources.value.forEach((item) => {
+  localResources.value.forEach((item: VideoWallResource) => {
     const media = mediaRefs.value[item.id];
     if (!media) return;
     media.playbackRate = playbackRate.value;
@@ -357,7 +373,7 @@ function syncIsPlayingFromPrimary() {
 }
 
 async function playAllVideos() {
-  const tasks = localResources.value.map(async (item) => {
+  const tasks = localResources.value.map(async (item: VideoWallResource) => {
     const media = mediaRefs.value[item.id];
     if (!media) return;
     try {
@@ -371,7 +387,7 @@ async function playAllVideos() {
 }
 
 function pauseAllVideos() {
-  localResources.value.forEach((item) => {
+  localResources.value.forEach((item: VideoWallResource) => {
     const media = mediaRefs.value[item.id];
     if (!media) return;
     media.pause();
@@ -599,10 +615,10 @@ defineExpose({
 </script>
 
 <template>
-  <div
-    class="flex w-full h-full min-h-[500px] gap-4 text-gray-100 font-sans transition-colors duration-300 vwp-bg-main vwp-font"
-    :class="[`theme-${theme}`]"
-  >
+  <div class="video-wall-player" :class="[`theme-${theme}`]" style="width: 100%; height: 100%;">
+    <div
+      class="flex w-full h-full min-h-[500px] gap-4 text-gray-100 font-sans transition-colors duration-300 vwp-bg-main vwp-font"
+    >
     <!-- Sidebar -->
     <div
       v-if="showSidebar"
@@ -697,7 +713,7 @@ defineExpose({
             <!-- Media Element -->
             <audio
               v-if="isAudioChunk"
-              :ref="(el) => setMediaRef(item.id, el as HTMLAudioElement)"
+              :ref="setMediaVNodeRef(item.id)"
               :src="item.chunkUrls[activeChunkIndex] || ''"
               preload="metadata"
               @timeupdate="
@@ -717,7 +733,7 @@ defineExpose({
             ></audio>
             <video
               v-else
-              :ref="(el) => setMediaRef(item.id, el as HTMLVideoElement)"
+              :ref="setMediaVNodeRef(item.id)"
               class="h-full w-full bg-transparent transition-transform duration-700"
               :style="{ objectFit: objectFit }"
               :src="item.chunkUrls[activeChunkIndex] || ''"
@@ -876,6 +892,7 @@ defineExpose({
         />
       </div>
     </div>
+  </div>
   </div>
 </template>
 

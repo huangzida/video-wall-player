@@ -32,7 +32,6 @@ Ensure you have `vue` and `@vueuse/core` installed.
 ```vue
 <script setup lang="ts">
 import { VideoWallPlayer } from 'video-wall-player';
-import 'video-wall-player/dist/style.css'; // Required for styling
 
 const resources = [
   {
@@ -55,6 +54,12 @@ const resources = [
   </div>
 </template>
 ```
+
+### Styling (auto-injected, no global pollution)
+
+- **No manual CSS import**: styles are injected automatically when you import the library.
+- **Scoped Tailwind utilities**: all Tailwind utility rules are scoped under `.video-wall-player`, so they won't affect your app's global styles.
+- **No Tailwind preflight**: the library build disables Tailwind preflight to avoid resetting your site's base element styles.
 
 ## Props
 

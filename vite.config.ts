@@ -7,7 +7,7 @@ export default defineConfig({
   root: './demo',
   base: '/video-wall-player/',
   build: {
-    outDir: '../docs',
+    outDir: '../dist-pages',
     emptyOutDir: true,
   },
   resolve: {

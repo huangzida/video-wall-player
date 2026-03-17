@@ -32,7 +32,6 @@ pnpm add video-wall-player
 ```vue
 <script setup lang="ts">
 import { VideoWallPlayer } from 'video-wall-player';
-import 'video-wall-player/dist/style.css'; // 必须引入样式文件
 
 const resources = [
   {
@@ -55,6 +54,12 @@ const resources = [
   </div>
 </template>
 ```
+
+### 样式说明（自动注入且不污染全局）
+
+- **无需手动引入 CSS**：安装并 `import` 组件后会自动注入样式。
+- **Tailwind 工具类已作用域化**：所有 Tailwind utility 都限制在 `.video-wall-player` 容器内，不会影响宿主页面全局。
+- **已关闭 Tailwind Preflight**：避免重置宿主项目的基础标签样式（如 `button/img` 等）。
 
 ## Props
 
