@@ -1,6 +1,30 @@
 # Changelog
 
 
+## v0.0.10...main
+
+[compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.10...main)
+
+### 🚀 Enhancements
+
+- 新增玻璃主题样式 ([899a1c5](https://github.com/huangzida/video-wall-player/commit/899a1c5))
+- **VideoWallPlayer:** 新增布局模式与键盘快捷键支持 ([bb352b6](https://github.com/huangzida/video-wall-player/commit/bb352b6))
+- **video-wall:** 为视频格添加全屏按钮和错误处理 ([84e56c9](https://github.com/huangzida/video-wall-player/commit/84e56c9))
+- 更新视频墙播放器配置与文档 ([4749e67](https://github.com/huangzida/video-wall-player/commit/4749e67))
+- 更新视频墙播放器的样式和构建配置 ([798c87b](https://github.com/huangzida/video-wall-player/commit/798c87b))
+
+### 📦 Build
+
+- 更新构建产物的哈希值引用 ([d69d5df](https://github.com/huangzida/video-wall-player/commit/d69d5df))
+
+### 🏡 Chore
+
+- Update pnpm/action-setup to version 4 in workflows ([732aeb7](https://github.com/huangzida/video-wall-player/commit/732aeb7))
+
+### ❤️ Contributors
+
+- Huangzida <398926656@qq.com>
+
 ## v0.0.9...main
 
 [compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.9...main)
