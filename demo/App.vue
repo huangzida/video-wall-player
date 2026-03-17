@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useStorage } from '@vueuse/core';
-import { VideoWallPlayer } from '../dist/index.mjs';
+import { VideoWallPlayer } from '../dist/auto.mjs';
 import DemoSettings from './components/DemoSettings.vue';
 import type { VideoWallTag, VideoWallTheme, VideoWallControlSize, VideoWallLayoutMode } from '../src/components/VideoWallPlayer/types';
 

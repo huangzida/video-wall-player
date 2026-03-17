@@ -1,0 +1,4 @@
+在生成 Git commit message 时，请遵循以下规则：
+1. 必须使用中文。
+2. 遵循 Conventional Commits 规范（例如：feat: ..., fix: ..., docs: ...）。
+3. 描述需简洁明确，不超过 100 个字。

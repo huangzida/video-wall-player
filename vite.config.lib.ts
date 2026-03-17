@@ -2,12 +2,10 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import dts from 'vite-plugin-dts';
-import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 
 export default defineConfig({
   plugins: [
     vue(),
-    cssInjectedByJsPlugin(),
     dts({
       tsconfigPath: './tsconfig.json',
       outDir: 'dist/types',
@@ -17,10 +15,13 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+        style: resolve(__dirname, 'src/style.ts'),
+      },
       name: 'VideoWallPlayer',
       fileName: (format) => {
-        if (format === 'es') return 'index.mjs';
+        if (format === 'es') return '[name].mjs';
         return `index.${format}.js`;
       },
       formats: ['es']

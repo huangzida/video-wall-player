@@ -895,7 +895,3 @@ defineExpose({
   </div>
   </div>
 </template>
-
-<style>
-@import "../../styles/themes.css";
-</style>

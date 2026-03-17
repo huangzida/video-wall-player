@@ -10,7 +10,12 @@
     ".": {
       "types": "./dist/types/index.d.ts",
       "import": "./dist/index.mjs"
-    }
+    },
+    "./auto": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/auto.mjs"
+    },
+    "./style.css": "./dist/style.css"
   },
   "files": [
     "dist"
@@ -19,7 +24,7 @@
     "demo:build": "vite build",
     "demo:dev": "vite",
     "dev": "vite",
-    "build": "vite build -c vite.config.lib.ts",
+    "build": "vite build -c vite.config.lib.ts && vite build -c vite.config.lib.auto.ts",
     "bump": "bumpp",
     "changelog": "changelogen --output CHANGELOG.md",
     "release": "pnpm build && pnpm changelog && pnpm bump --all --commit \"chore: release v%s\" --push --tag"
