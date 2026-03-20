@@ -100,6 +100,10 @@ import 'video-wall-player/auto';
 | `videoWallPadding` | `number` | `10` | 右侧视频墙区域的内边距（像素）。 |
 | `layoutMode` | `'auto' \| '1x1' \| '2x2' \| '3x3' \| '4x4' \| '1+5' \| '1+7'` | `'auto'` | 网格布局模式。'auto' 自动计算，其他为固定或焦点布局。 |
 | `tags` | `VideoWallTag[]` | `[]` | 时间轴打点列表。 |
+| `autoSkipOnStall` | `boolean` | `true` | 启用视频卡顿/错误时的自动跳帧恢复功能。 |
+| `skipStepMs` | `number` | `100` | 每次恢复尝试时向前跳过的毫秒数（会随失败次数指数递增）。 |
+| `maxSkipAttempts` | `number` | `10` | 自动跳帧恢复的最大尝试次数，超过后放弃。 |
+| `stallThresholdMs` | `number` | `500` | 检测到卡顿后，触发自动跳帧前的等待毫秒数。 |
 
 ### VideoWallResource 类型定义
 

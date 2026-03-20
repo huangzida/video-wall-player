@@ -9,6 +9,8 @@ import type { VideoWallTag, VideoWallTheme, VideoWallControlSize, VideoWallLayou
 // const testDuration = 90;
 const testUrl = 'https://media.w3.org/2010/05/sintel/trailer.mp4';
 const testDuration = 52;
+// const testUrl = 'http://localhost:3000/2.mp4';
+// const testDuration = 301;
 const testPoster = 'https://media.w3.org/2010/05/sintel/poster.png';
 
 const resources = computed(() => {
@@ -45,6 +47,10 @@ const sidebarWidth = useStorage('demo-sidebar-width', 280);
 const videoWallPadding = useStorage('demo-video-wall-padding', 10);
 const videoCount = useStorage('demo-video-count', 4);
 const layoutMode = useStorage<VideoWallLayoutMode>('demo-layout-mode', 'auto');
+const autoSkipOnStall = useStorage('demo-auto-skip-on-stall', true);
+const skipStepMs = useStorage('demo-skip-step-ms', 100);
+const maxSkipAttempts = useStorage('demo-max-skip-attempts', 10);
+const stallThresholdMs = useStorage('demo-stall-threshold-ms', 500);
 
 const tags = ref<VideoWallTag[]>([
   { time: 10, name: 'Intro End', color: '#ef4444' },
@@ -82,6 +88,10 @@ const tags = ref<VideoWallTag[]>([
       :sidebar-width="sidebarWidth"
       :video-wall-padding="videoWallPadding"
       :layout-mode="layoutMode"
+      :auto-skip-on-stall="autoSkipOnStall"
+      :skip-step-ms="skipStepMs"
+      :max-skip-attempts="maxSkipAttempts"
+      :stall-threshold-ms="stallThresholdMs"
     />
 
     <DemoSettings
@@ -109,6 +119,10 @@ const tags = ref<VideoWallTag[]>([
       v-model:video-wall-padding="videoWallPadding"
       v-model:video-count="videoCount"
       v-model:layout-mode="layoutMode"
+      v-model:auto-skip-on-stall="autoSkipOnStall"
+      v-model:skip-step-ms="skipStepMs"
+      v-model:max-skip-attempts="maxSkipAttempts"
+      v-model:stall-threshold-ms="stallThresholdMs"
     />
   </div>
 </template>

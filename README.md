@@ -100,6 +100,10 @@ Notes:
 | `videoWallPadding` | `number` | `10` | Padding inside the right-side video wall area in pixels. |
 | `layoutMode` | `'auto' \| '1x1' \| '2x2' \| '3x3' \| '4x4' \| '1+5' \| '1+7'` | `'auto'` | Grid layout mode. 'auto' calculates based on count. Others are fixed or focus layouts. |
 | `tags` | `VideoWallTag[]` | `[]` | List of timeline tags. |
+| `autoSkipOnStall` | `boolean` | `true` | Enable automatic skip recovery when video stalls/fails. |
+| `skipStepMs` | `number` | `100` | Milliseconds to skip forward on each recovery attempt (with exponential backoff). |
+| `maxSkipAttempts` | `number` | `10` | Maximum number of auto-skip recovery attempts before giving up. |
+| `stallThresholdMs` | `number` | `500` | Milliseconds to wait before triggering auto-skip after stall detection. |
 
 ### VideoWallResource Interface
 

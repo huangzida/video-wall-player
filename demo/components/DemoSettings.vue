@@ -34,6 +34,10 @@ const props = defineProps<{
   videoWallPadding: number;
   videoCount: number;
   layoutMode: VideoWallLayoutMode;
+  autoSkipOnStall: boolean;
+  skipStepMs: number;
+  maxSkipAttempts: number;
+  stallThresholdMs: number;
 }>();
 
 const emit = defineEmits<{
@@ -61,6 +65,10 @@ const emit = defineEmits<{
   'update:videoWallPadding': [value: number];
   'update:videoCount': [value: number];
   'update:layoutMode': [value: VideoWallLayoutMode];
+  'update:autoSkipOnStall': [value: boolean];
+  'update:skipStepMs': [value: number];
+  'update:maxSkipAttempts': [value: number];
+  'update:stallThresholdMs': [value: number];
 }>();
 
 const open = ref(false);
@@ -104,6 +112,10 @@ const t = computed(() => {
     lang: zh ? '语言' : 'Language',
     langZh: '中文',
     langEn: 'EN',
+    autoSkip: zh ? '自动跳帧' : 'Auto Skip on Stall',
+    skipStep: zh ? '跳帧步长' : 'Skip Step (ms)',
+    maxAttempts: zh ? '最大尝试次数' : 'Max Attempts',
+    stallThreshold: zh ? '卡顿检测阈值' : 'Stall Threshold (ms)',
   };
 });
 
@@ -206,6 +218,22 @@ const modelVideoCount = computed({
 const modelLayoutMode = computed({
   get: () => props.layoutMode,
   set: (v: VideoWallLayoutMode) => emit('update:layoutMode', v),
+});
+const modelAutoSkipOnStall = computed({
+  get: () => props.autoSkipOnStall,
+  set: (v: boolean) => emit('update:autoSkipOnStall', v),
+});
+const modelSkipStepMs = computed({
+  get: () => props.skipStepMs,
+  set: (v: number) => emit('update:skipStepMs', v),
+});
+const modelMaxSkipAttempts = computed({
+  get: () => props.maxSkipAttempts,
+  set: (v: number) => emit('update:maxSkipAttempts', v),
+});
+const modelStallThresholdMs = computed({
+  get: () => props.stallThresholdMs,
+  set: (v: number) => emit('update:stallThresholdMs', v),
 });
 </script>
 
@@ -363,6 +391,54 @@ const modelLayoutMode = computed({
           <option value="normal">{{ lang === 'zh-CN' ? '中' : 'Normal' }}</option>
           <option value="large">{{ lang === 'zh-CN' ? '大' : 'Large' }}</option>
         </select>
+      </div>
+
+      <h4>{{ lang === 'zh-CN' ? '自动跳帧恢复' : 'Auto Skip Recovery' }}</h4>
+
+      <div class="row">
+        <label>{{ t.autoSkip }}</label>
+        <input type="checkbox" v-model="modelAutoSkipOnStall" />
+      </div>
+
+      <div>
+        <div class="row">
+          <label>{{ t.skipStep }}</label>
+          <span class="muted">{{ modelSkipStepMs }}ms</span>
+        </div>
+        <input
+          type="range"
+          v-model.number="modelSkipStepMs"
+          min="50"
+          max="1000"
+          step="50"
+        />
+      </div>
+
+      <div>
+        <div class="row">
+          <label>{{ t.maxAttempts }}</label>
+          <span class="muted">{{ modelMaxSkipAttempts }}</span>
+        </div>
+        <input
+          type="range"
+          v-model.number="modelMaxSkipAttempts"
+          min="1"
+          max="20"
+        />
+      </div>
+
+      <div>
+        <div class="row">
+          <label>{{ t.stallThreshold }}</label>
+          <span class="muted">{{ modelStallThresholdMs }}ms</span>
+        </div>
+        <input
+          type="range"
+          v-model.number="modelStallThresholdMs"
+          min="200"
+          max="3000"
+          step="100"
+        />
       </div>
 
       <h4>{{ t.layout }}</h4>

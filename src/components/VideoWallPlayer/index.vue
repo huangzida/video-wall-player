@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch, onMounted } from "vue";
+import { computed, nextTick, ref, watch, onMounted, onUnmounted } from "vue";
 import type { ComponentPublicInstance } from "vue";
 import { useFullscreen, onKeyStroke } from "@vueuse/core";
 import { AudioLines, Volume2, VolumeX, AlertCircle, RefreshCw, Maximize2 } from "lucide-vue-next";
@@ -38,6 +38,10 @@ const props = withDefaults(
     fixedTileMeta?: boolean;
     sidebarWidth?: number;
     videoWallPadding?: number;
+    autoSkipOnStall?: boolean;
+    skipStepMs?: number;
+    maxSkipAttempts?: number;
+    stallThresholdMs?: number;
   }>(),
   {
     resources: () => [],
@@ -66,6 +70,10 @@ const props = withDefaults(
     fixedTileMeta: true,
     sidebarWidth: 280,
     videoWallPadding: 10,
+    autoSkipOnStall: true,
+    skipStepMs: 100,
+    maxSkipAttempts: 10,
+    stallThresholdMs: 500,
   }
 );
 
@@ -83,12 +91,23 @@ const individualMutedStates = ref<Record<string, boolean>>({});
 const bufferingStates = ref<Record<string, boolean>>({});
 const errorStates = ref<Record<string, boolean>>({});
 
+interface StallState {
+  isStalled: boolean;
+  pendingSkip: boolean;
+  skipCount: number;
+  startTime: number;
+  lastRetryTime: number;
+}
+
+const stallStates = ref<Record<string, StallState>>({});
+
+let stallCheckTimer: ReturnType<typeof setInterval> | null = null;
+
 const wallRef = ref<HTMLElement>();
 const mediaRefs = ref<Record<string, HTMLMediaElement>>({});
 const suppressTimeUpdate = ref(false);
 
 const itemCount = computed(() => props.resources.length);
-const showPerTileMeta = computed(() => itemCount.value > 1);
 const canReorderWall = computed(() => itemCount.value > 1);
 
 const primaryResourceId = ref("");
@@ -117,27 +136,71 @@ watch(
 
 onMounted(() => {
   if (props.autoplay && localResources.value.length > 0) {
-    // Give a small buffer for elements to be ready
     setTimeout(() => {
       void playAllVideos();
     }, 500);
+  }
+
+  if (props.autoSkipOnStall) {
+    stallCheckTimer = setInterval(checkAndRecoverStall, 200);
+  }
+});
+
+onUnmounted(() => {
+  if (stallCheckTimer) {
+    clearInterval(stallCheckTimer);
+    stallCheckTimer = null;
   }
 });
 
 // Media Event Handlers
 function handleWaiting(id: string) {
   bufferingStates.value[id] = true;
+
+  console.log(`[DEBUG] ${id}: *** WAITING EVENT FIRED ***`);
+
+  if (props.autoSkipOnStall && !stallStates.value[id]) {
+    console.log(`[DEBUG] ${id}: Creating stall state on waiting (initial)`);
+    stallStates.value[id] = {
+      isStalled: false,
+      pendingSkip: false,
+      skipCount: 0,
+      startTime: Date.now(),
+      lastRetryTime: 0,
+    };
+  }
 }
 
 function handlePlaying(id: string) {
   bufferingStates.value[id] = false;
   errorStates.value[id] = false;
+
+  console.log(`[DEBUG] ${id}: *** PLAYING EVENT FIRED (native) ***`);
+
+  if (stallStates.value[id]) {
+    console.log(`[DEBUG] ${id}: Deleting stall state on playing event`);
+    delete stallStates.value[id];
+  }
 }
 
 function handleError(id: string) {
   bufferingStates.value[id] = false;
   errorStates.value[id] = true;
   emit("error", `Error loading video: ${id}`);
+
+  if (props.autoSkipOnStall) {
+    if (!stallStates.value[id]) {
+      stallStates.value[id] = {
+        isStalled: true,
+        pendingSkip: false,
+        skipCount: 0,
+        startTime: Date.now(),
+        lastRetryTime: 0,
+      };
+    } else {
+      stallStates.value[id].isStalled = true;
+    }
+  }
 }
 
 function handleRetry(id: string) {
@@ -149,6 +212,106 @@ function handleRetry(id: string) {
       media.play().catch(() => {});
     }
   }
+}
+
+function checkAndRecoverStall() {
+  const now = Date.now();
+
+  Object.keys(stallStates.value).forEach(id => {
+    const state = stallStates.value[id];
+    if (!state || !state.isStalled) return;
+
+    const media = mediaRefs.value[id];
+    if (!media) return;
+
+    const stalledDuration = now - state.startTime;
+    const timeSinceLastRetry = now - state.lastRetryTime;
+    const retryInterval = Math.min(1000 + state.skipCount * 200, 2000);
+
+    if (stalledDuration >= props.stallThresholdMs && timeSinceLastRetry >= retryInterval) {
+      if (state.skipCount < props.maxSkipAttempts) {
+        performAutoSkip(id);
+      } else {
+        console.warn(`[AutoSkip] ${id}: Max attempts reached`);
+        delete stallStates.value[id];
+      }
+    }
+  });
+}
+
+function performAutoSkip(id: string) {
+  const media = mediaRefs.value[id];
+  if (!media) return;
+
+  const state = stallStates.value[id];
+  if (!state) return;
+
+  const baseSkipAmount = props.skipStepMs / 1000;
+  const multiplier = Math.pow(2, Math.floor(state.skipCount / 3));
+  const skipAmount = baseSkipAmount * multiplier;
+  const newTime = Math.min(media.duration || Infinity, media.currentTime + skipAmount);
+
+  console.log(`[AutoSkip] ${id}: Skip ${state.skipCount + 1}/${props.maxSkipAttempts}, ${media.currentTime.toFixed(2)}s -> ${newTime.toFixed(2)}s (${multiplier}x)`);
+
+  state.isStalled = false;
+  state.skipCount++;
+  state.lastRetryTime = Date.now();
+
+  media.pause();
+  media.load();
+  media.currentTime = newTime;
+
+  let recoveryTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  let playCalled = false;
+
+  const onCanPlay = () => {
+    media.removeEventListener('canplay', onCanPlay);
+    if (playCalled) return;
+    playCalled = true;
+    console.log(`[AutoSkip] ${id}: canplay fired, calling play()`);
+    const playPromise = media.play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        console.log(`[AutoSkip] ${id}: play() succeeded`);
+      }).catch((err) => {
+        console.log(`[AutoSkip] ${id}: play() failed: ${err.message}`);
+      });
+    }
+  };
+
+  const onPlaying = () => {
+    media.removeEventListener('canplay', onCanPlay);
+    media.removeEventListener('waiting', onWaiting);
+    media.removeEventListener('playing', onPlaying);
+    if (recoveryTimeout) clearTimeout(recoveryTimeout);
+    console.log(`[AutoSkip] ${id}: Recovered successfully at ${media.currentTime.toFixed(2)}s`);
+    delete stallStates.value[id];
+  };
+
+  const onWaiting = () => {
+    media.removeEventListener('canplay', onCanPlay);
+    media.removeEventListener('waiting', onWaiting);
+    if (recoveryTimeout) clearTimeout(recoveryTimeout);
+    if (stallStates.value[id]) {
+      stallStates.value[id].isStalled = true;
+      console.log(`[AutoSkip] ${id}: Fell back to waiting`);
+    }
+  };
+
+  media.addEventListener('canplay', onCanPlay);
+  media.addEventListener('playing', onPlaying);
+  media.addEventListener('waiting', onWaiting);
+
+  recoveryTimeout = setTimeout(() => {
+    media.removeEventListener('canplay', onCanPlay);
+    media.removeEventListener('playing', onPlaying);
+    media.removeEventListener('waiting', onWaiting);
+    if (stallStates.value[id]) {
+      stallStates.value[id].isStalled = true;
+      console.log(`[AutoSkip] ${id}: Recovery timeout`);
+    }
+  }, 5000);
 }
 
 function handleSingleFullscreen(id: string) {
@@ -806,6 +969,19 @@ defineExpose({
               >
                 <Maximize2 class="w-3.5 h-3.5" />
               </button>
+            </div>
+
+            <!-- AutoSkip Loading Overlay -->
+            <div
+              v-if="stallStates[item.id]?.isStalled && stallStates[item.id]?.skipCount > 0"
+              class="absolute inset-0 bg-black/80 flex items-center justify-center z-40 backdrop-blur-sm"
+            >
+              <div class="flex flex-col items-center gap-3">
+                <div class="w-10 h-10 border-3 border-white/20 border-t-blue-500 rounded-full animate-spin"></div>
+                <span class="text-xs text-gray-300 font-medium">
+                  Recovering... ({{ stallStates[item.id].skipCount }}/{{ maxSkipAttempts }})
+                </span>
+              </div>
             </div>
 
             <!-- Mute Button -->
