@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.0.11...main
+
+[compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.11...main)
+
+### 🚀 Enhancements
+
+- **video-player:** 新增视频卡顿自动跳帧恢复功能 ([f31ef27](https://github.com/huangzida/video-wall-player/commit/f31ef27))
+
+### 🏡 Chore
+
+- 更新 .cursorrules 文件中的注释格式 ([35fdf2c](https://github.com/huangzida/video-wall-player/commit/35fdf2c))
+
+### ❤️ Contributors
+
+- Huangzida <398926656@qq.com>
+
 ## v0.0.10...main
 
 [compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.10...main)
