@@ -91,20 +91,10 @@ const canvasState = useCanvasWall({
 });
 
 // --- Interaction ---
-// ponytail: hitTest delegates to PixiJS event system via sprite bounds.
-// We use manual bounds check since PixiJS v8 eventMode requires the renderer's event system.
-function hitTestCanvas(x: number, y: number): string | null {
-  // Iterate sprites, check if point is within bounds
-  // Sprites are stored in canvasState internally; we approximate via layout
-  // The simplest approach: PixiJS handles hit testing through its own event system on sprites.
-  // For double-tap, we use the DOM pointer event coordinates and match against sprite layout.
-  return null;
-}
-
 const interaction = useCanvasInteraction({
   enableFocus,
   onFocus: (id) => canvasState.focusOn(id),
-  hitTest: hitTestCanvas,
+  hitTest: (x, y) => canvasState.hitTest(x, y),
 });
 
 const wallRef = ref<HTMLElement>();
@@ -183,13 +173,11 @@ const handleStepForward = (seconds: number) => {
 };
 
 // --- Canvas pointer events (for double-tap focus) ---
-// ponytail: PixiJS v8 sprites with eventMode='static' receive their own events.
-// For double-tap we listen on the canvas DOM element and use PixiJS's internal
-// event system to determine which sprite was hit.
 function handleCanvasPointerDown(event: PointerEvent) {
-  // PixiJS handles sprite-level events internally; this DOM listener is a fallback
-  // for cases where sprite events don't fire. The actual focus trigger is via
-  // sprite.on('pointertap') set up in useCanvasWall.
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  interaction.handlePointerDown(x, y);
 }
 
 const isMuted = computed(() =>

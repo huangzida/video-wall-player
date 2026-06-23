@@ -7,6 +7,7 @@ export interface CanvasWallState {
   canvasContainerEl: Ref<HTMLElement | null>;
   isReady: Ref<boolean>;
   focusOn: (id: string | null) => void;
+  hitTest: (x: number, y: number) => string | null;
   initApp: () => Promise<void>;
   attachResizeObserver: () => void;
   createSprite: (id: string) => void;
@@ -347,6 +348,22 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     layoutSprites();
   }
 
+  // ponytail: Manual hit test against sprite bounds. Iterates sprites and checks
+  // if the point (in canvas CSS pixels) falls within any sprite's rectangle.
+  function hitTest(x: number, y: number): string | null {
+    for (const [id, sprite] of sprites) {
+      if (!sprite.visible) continue;
+      const sx = sprite.x;
+      const sy = sprite.y;
+      const sw = sprite.width;
+      const sh = sprite.height;
+      if (x >= sx && x <= sx + sw && y >= sy && y <= sy + sh) {
+        return id;
+      }
+    }
+    return null;
+  }
+
   // --- Watch for resource changes ---
   watch(
     () => resources.value.map((r) => r.id).join(','),
@@ -418,6 +435,7 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     canvasContainerEl,
     isReady,
     focusOn,
+    hitTest,
     initApp,
     attachResizeObserver,
     createSprite,
