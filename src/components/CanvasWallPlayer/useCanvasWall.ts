@@ -109,8 +109,9 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     const video = videoPool.get(id);
     if (!video) return null;
 
-    // ponytail: VideoSource requires video to have valid dimensions (loadedmetadata).
-    // Use Texture.from() which handles VideoSource creation internally.
+    // ponytail: Require video to be playing so GPU texture upload is driven by VideoSource.
+    // Creating texture before play() causes GL_INVALID_OPERATION: glCopySubTextureCHROMIUM.
+    if (video.paused) return null;
     if (!video.videoWidth || !video.videoHeight) return null;
 
     const texture = Texture.from(video);
@@ -122,14 +123,14 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     if (sprites.has(id)) return;
     const texture = textures.get(id) || createTextureForVideo(id);
     if (!texture) {
-      // Video metadata not ready yet — retry on loadedmetadata event
+      // Video not playing yet — retry on 'playing' event when GPU texture is ready
       const video = videoPool.get(id);
       if (video) {
-        const onMeta = () => {
-          video.removeEventListener('loadedmetadata', onMeta);
+        const onPlaying = () => {
+          video.removeEventListener('playing', onPlaying);
           createSprite(id);
         };
-        video.addEventListener('loadedmetadata', onMeta);
+        video.addEventListener('playing', onPlaying);
       }
       return;
     }
