@@ -64,14 +64,6 @@ const tags = ref<VideoWallTag[]>([
 
 <template>
   <div class="demo-root">
-    <!-- Mode switcher -->
-    <button
-      class="fixed top-2 left-2 z-[200] px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg shadow-lg hover:bg-blue-700 transition-colors"
-      @click="useCanvasMode = !useCanvasMode"
-    >
-      {{ useCanvasMode ? 'Canvas Mode (click for DOM)' : 'DOM Mode (click for Canvas)' }}
-    </button>
-
     <CanvasWallDemo v-if="useCanvasMode" />
 
     <template v-else>
@@ -139,5 +131,13 @@ const tags = ref<VideoWallTag[]>([
         v-model:stall-threshold-ms="stallThresholdMs"
       />
     </template>
+
+    <!-- Mode switcher (last in DOM, highest z-index) -->
+    <button
+      style="position: fixed; top: 8px; left: 8px; z-index: 99999; padding: 6px 12px; background: #2563eb; color: #fff; font-size: 12px; border-radius: 8px; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3);"
+      @click="useCanvasMode = !useCanvasMode"
+    >
+      {{ useCanvasMode ? '← Back to DOM Mode' : 'Canvas Mode →' }}
+    </button>
   </div>
 </template>
