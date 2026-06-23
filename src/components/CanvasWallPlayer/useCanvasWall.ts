@@ -1,5 +1,5 @@
 import { ref, watch, onUnmounted, type Ref, computed } from 'vue';
-import { Application, Sprite, Texture, Container, VideoSource } from 'pixi.js';
+import { Application, Sprite, Texture, Container } from 'pixi.js';
 import { useVideoWallLayout } from '../../hooks/useVideoWallLayout';
 import type { VideoWallLayoutMode } from '../VideoWallPlayer/types';
 
@@ -27,6 +27,71 @@ interface UseCanvasWallOptions {
   enableFocus: Ref<boolean>;
 }
 
+// ponytail: VideoBridge — 2D canvas intermediate to avoid Chrome's glCopySubTextureCHROMIUM
+// video texture optimization bug. Each video is drawn to its own small 2D canvas via
+// drawImage(), then PixiJS creates a texture from the canvas (CanvasSource). CanvasSource
+// uses a different GPU upload path that doesn't trigger the buggy video texture copy.
+// The bridge canvas updates are driven by PixiJS ticker, throttled to targetFps.
+// Ceiling: one extra canvas per video + drawImage per frame. For 20 videos at 15fps,
+// that's 300 drawImage calls/sec — negligible vs the GPU decode savings.
+class VideoBridge {
+  readonly video: HTMLVideoElement;
+  readonly canvas: HTMLCanvasElement;
+  private ctx: CanvasRenderingContext2D;
+  private rafId: number | null = null;
+  private onFirstFrame: (() => void) | null = null;
+
+  constructor(video: HTMLVideoElement) {
+    this.video = video;
+    this.canvas = document.createElement('canvas');
+    this.canvas.width = video.videoWidth || 16;
+    this.canvas.height = video.videoHeight || 16;
+    const ctx = this.canvas.getContext('2d', { alpha: false });
+    if (!ctx) throw new Error('2D context unavailable');
+    this.ctx = ctx;
+    this.ctx.fillStyle = '#000';
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  // Returns a Promise that resolves when the first frame is drawn to the bridge canvas.
+  waitForFirstFrame(): Promise<void> {
+    return new Promise((resolve) => {
+      // If video already has data, draw immediately
+      if (this.video.readyState >= 2 && this.video.videoWidth > 0) {
+        this.drawFrame();
+        resolve();
+        return;
+      }
+      this.onFirstFrame = resolve;
+      // Listen for loadeddata as fallback
+      const handler = () => {
+        this.video.removeEventListener('loadeddata', handler);
+        if (this.onFirstFrame) {
+          this.drawFrame();
+          this.onFirstFrame();
+          this.onFirstFrame = null;
+        }
+      };
+      this.video.addEventListener('loadeddata', handler);
+    });
+  }
+
+  // Draw current video frame to the bridge canvas. Called every render tick.
+  drawFrame(): void {
+    if (this.video.readyState >= 2) {
+      this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+    }
+  }
+
+  destroy(): void {
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+    this.onFirstFrame = null;
+  }
+}
+
 export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
   const {
     resources,
@@ -45,6 +110,7 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
   let stageContainer: Container | null = null;
   const sprites = new Map<string, Sprite>();
   const textures = new Map<string, Texture>();
+  const bridges = new Map<string, VideoBridge>();
   let focusedId: string | null = null;
   let resizeObserver: ResizeObserver | null = null;
 
@@ -82,11 +148,13 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     stageContainer = new Container();
     app.stage.addChild(stageContainer);
 
-    // ponytail: Use PixiJS native ticker.maxFPS instead of manual setInterval.
-    // VideoSource updates via Ticker.shared, so the ticker must stay running
-    // for textures to update properly. maxFPS throttles both render + texture update.
-    applyTargetFps();
+    // ponytail: Ticker callback draws all video frames to their bridge canvases before render.
+    // CanvasSource detects DOM canvas changes and auto-updates the PixiJS texture.
+    app.ticker.add(() => {
+      bridges.forEach((bridge) => bridge.drawFrame());
+    });
 
+    applyTargetFps();
     isReady.value = true;
   }
 
@@ -104,40 +172,32 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     layoutSprites();
   }
 
-  // Set of ids waiting for texture creation
   const pendingTextureIds = new Set<string>();
 
   // --- Texture/Sprite management ---
-
-  // ponytail: PixiJS VideoSource manages its own readiness lifecycle (canplaythrough + loadedmetadata).
-  // We delegate to its async load() Promise to ensure GPU texture storage is allocated
-  // before the texture is used for rendering. This prevents GL_INVALID_OPERATION:
-  // glCopySubTextureCHROMIUM errors that occur when Chrome's video texture optimization
-  // tries to copy into uninitialized GPU storage.
   function createTextureForVideoAsync(id: string): Promise<Texture | null> {
     const video = videoPool.get(id);
     if (!video) return Promise.resolve(null);
-    if (!video.videoWidth || !video.videoHeight) return Promise.resolve(null);
 
-    const source = new VideoSource({
-      resource: video,
-      autoPlay: false,
-      autoLoad: true,
-      updateFPS: 0,
-    });
+    const bridge = new VideoBridge(video);
+    bridges.set(id, bridge);
 
-    return source.load().then(() => {
-      const texture = new Texture({ source });
+    return bridge.waitForFirstFrame().then(() => {
+      // Create texture from the 2D canvas (CanvasSource), not from video directly
+      const texture = Texture.from(bridge.canvas);
       textures.set(id, texture);
       return texture;
-    }).catch(() => null);
+    }).catch(() => {
+      bridge.destroy();
+      bridges.delete(id);
+      return null;
+    });
   }
 
   function createSprite(id: string) {
     if (sprites.has(id)) return;
-    if (pendingTextureIds.has(id)) return; // already waiting
+    if (pendingTextureIds.has(id)) return;
 
-    // If texture already created, go straight to sprite
     const existingTexture = textures.get(id);
     if (existingTexture) {
       doCreateSprite(id, existingTexture);
@@ -150,7 +210,7 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
 
     createTextureForVideoAsync(id).then((texture) => {
       pendingTextureIds.delete(id);
-      if (!texture) return; // will retry on next syncSprites
+      if (!texture) return;
       doCreateSprite(id, texture);
     });
   }
@@ -162,14 +222,9 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     sprite.label = id;
     stageContainer?.addChild(sprite);
     sprites.set(id, sprite);
-    // Force a render to allocate GPU texture storage immediately
-    app?.render();
     layoutSprites();
   }
 
-  // ponytail: PixiJS VideoSource.destroy() calls video.pause() + clears src, which would
-  // destroy our managed video elements. We never destroy the VideoSource - only the Texture
-  // wrapper. The video element lifecycle is managed by useVideoSources.
   function removeSprite(id: string) {
     const sprite = sprites.get(id);
     if (sprite) {
@@ -179,9 +234,13 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     }
     const texture = textures.get(id);
     if (texture) {
-      // Destroy texture wrapper but NOT the source (to avoid PixiJS killing the video element)
       texture.destroy(true);
       textures.delete(id);
+    }
+    const bridge = bridges.get(id);
+    if (bridge) {
+      bridge.destroy();
+      bridges.delete(id);
     }
     layoutSprites();
   }
@@ -190,20 +249,19 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     if (!app || !stageContainer) return;
 
     const currentLayout = layout.value;
-    
+
     // ponytail: layout.value may have itemWidth=0 if ResizeObserver hasn't fired yet.
     // Fallback: compute directly from container dimensions.
     let itemWidth = currentLayout.itemWidth;
     let itemHeight = currentLayout.itemHeight;
     let cols = currentLayout.cols;
-    
+
     if (itemWidth <= 0 || itemHeight <= 0) {
       const cw = canvasContainerEl.value?.clientWidth || 0;
       const ch = canvasContainerEl.value?.clientHeight || 0;
       if (cw <= 0 || ch <= 0) return;
       const count = sprites.size;
       if (count <= 0) return;
-      // Simple auto layout: find best cols/rows
       let best = { cols: 1, rows: 1, area: 0 };
       for (let c = 1; c <= count; c++) {
         const r = Math.ceil(count / c);
@@ -229,7 +287,6 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     }
 
     if (focusedId) {
-      // Focused mode: only show focused sprite full-size
       sprites.forEach((sprite, id) => {
         if (id === focusedId) {
           sprite.visible = true;
@@ -278,11 +335,9 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
 
   function syncSprites() {
     const currentIds = new Set(resources.value.map((r) => r.id));
-    // Remove sprites for deleted resources
     [...sprites.keys()].forEach((id) => {
       if (!currentIds.has(id)) removeSprite(id);
     });
-    // Create sprites for new resources (texture creation deferred until video exists)
     currentIds.forEach((id) => {
       if (!sprites.has(id) && videoPool.has(id)) {
         createSprite(id);
@@ -291,17 +346,14 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     layoutSprites();
   }
 
-  // --- Watch targetFps changes ---
   watch(targetFps, () => {
     applyTargetFps();
   });
 
-  // --- Watch backgroundColor changes ---
   watch(backgroundColor, (newColor) => {
     if (app) app.renderer.background.color = newColor;
   });
 
-  // --- Watch layout changes ---
   watch(layout, () => {
     layoutSprites();
   }, { deep: true });
@@ -324,6 +376,8 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
       resizeObserver.disconnect();
       resizeObserver = null;
     }
+    bridges.forEach((b) => b.destroy());
+    bridges.clear();
     sprites.forEach((s) => s.destroy());
     sprites.clear();
     textures.forEach((t) => t.destroy(true));
