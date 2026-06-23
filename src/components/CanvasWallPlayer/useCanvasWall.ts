@@ -114,8 +114,10 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     const video = videoPool.get(id);
     if (!video) return null;
 
-    // ponytail: PixiJS v8 uses Texture + VideoSource, no separate VideoTexture class.
-    // autoUpdate defaults to true; updateFPS=0 means update every render.
+    // ponytail: VideoSource requires video to have valid dimensions (loadedmetadata).
+    // Creating texture before metadata fires causes WebGL GL_INVALID_OPERATION errors.
+    if (!video.videoWidth || !video.videoHeight) return null;
+
     const source = new VideoSource({
       resource: video,
       autoPlay: false,
@@ -128,7 +130,18 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
   function createSprite(id: string) {
     if (sprites.has(id)) return;
     const texture = textures.get(id) || createTextureForVideo(id);
-    if (!texture) return;
+    if (!texture) {
+      // Video metadata not ready yet — retry on loadedmetadata event
+      const video = videoPool.get(id);
+      if (video) {
+        const onMeta = () => {
+          video.removeEventListener('loadedmetadata', onMeta);
+          createSprite(id);
+        };
+        video.addEventListener('loadedmetadata', onMeta);
+      }
+      return;
+    }
 
     const sprite = new Sprite(texture);
     sprite.eventMode = 'static';
@@ -211,6 +224,12 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     }
 
     const spriteList = [...sprites.values()];
+    const totalRows = Math.ceil(spriteList.length / cols);
+    const totalGridW = cols * itemWidth + Math.max(0, cols - 1) * gap.value;
+    const totalGridH = totalRows * itemHeight + Math.max(0, totalRows - 1) * gap.value;
+    const offsetX = Math.max(0, (app.renderer.width - totalGridW) / 2);
+    const offsetY = Math.max(0, (app.renderer.height - totalGridH) / 2);
+
     spriteList.forEach((sprite, index) => {
       const row = Math.floor(index / cols);
       const col = index % cols;
@@ -218,8 +237,8 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
       sprite.width = itemWidth;
       sprite.height = itemHeight;
       sprite.position.set(
-        col * (itemWidth + gap.value),
-        row * (itemHeight + gap.value)
+        offsetX + col * (itemWidth + gap.value),
+        offsetY + row * (itemHeight + gap.value)
       );
     });
   }

@@ -57,7 +57,7 @@ const resources = computed(() => {
     />
 
     <!-- Settings panel -->
-    <div style="position: absolute; top: 8px; right: 8px; z-index: 100; background: rgba(0,0,0,0.8); color: #fff; font-size: 12px; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); width: 220px;">
+    <div style="position: absolute; top: 8px; left: 48px; z-index: 100; background: rgba(0,0,0,0.85); color: #fff; font-size: 12px; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); width: 200px; max-height: 80vh; overflow-y: auto;">
       <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px;">CanvasWall Settings</div>
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
         <span>Video Count</span>
