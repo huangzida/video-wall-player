@@ -10,7 +10,7 @@ export interface CanvasWallState {
   hitTest: (x: number, y: number) => string | null;
   initApp: () => Promise<void>;
   attachResizeObserver: () => void;
-  createSprite: (id: string) => void;
+  createSprite: (id: string) => Promise<void>;
   removeSprite: (id: string) => void;
   syncSprites: () => void;
   layoutSprites: () => void;
@@ -44,17 +44,12 @@ class VideoBridge {
   private onFirstFrame: (() => void) | null = null;
   private _drawErrorLogged = false;
 
-  constructor(video: HTMLVideoElement, maxBridgeWidth = 320) {
+  constructor(video: HTMLVideoElement) {
     this.video = video;
-    // ponytail: Downscale bridge canvas to maxBridgeWidth for performance.
-    // A 320x180 tile doesn't need a 640x360 bridge — halving resolution
-    // cuts drawImage + GPU upload cost by ~4x per frame.
-    const srcW = video.videoWidth || 16;
-    const srcH = video.videoHeight || 16;
-    const scale = Math.min(1, maxBridgeWidth / srcW);
+    // Use native video resolution — GPU handles scaling on upload.
     this.canvas = document.createElement('canvas');
-    this.canvas.width = Math.round(srcW * scale);
-    this.canvas.height = Math.round(srcH * scale);
+    this.canvas.width = video.videoWidth || 16;
+    this.canvas.height = video.videoHeight || 16;
     const ctx = this.canvas.getContext('2d', { alpha: false });
     if (!ctx) throw new Error('2D context unavailable');
     this.ctx = ctx;
@@ -86,15 +81,14 @@ class VideoBridge {
   }
 
   // Draw current video frame to the bridge canvas. Called every render tick.
-  // ponytail: Only draw when video is actively playing. When paused, skip to avoid
-  // triggering unnecessary range requests for video data the user hasn't requested.
-  drawFrame(): void {
-    if (this.video.paused) return;
+  // Returns true if a frame was actually drawn (video playing + data ready).
+  drawFrame(): boolean {
+    if (this.video.paused) return false;
     if (this.video.readyState >= 2) {
       try {
         this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+        return true;
       } catch (e) {
-        // ponytail: log once per bridge to avoid console spam
         if (!this._drawErrorLogged) {
           this._drawErrorLogged = true;
           console.error('[VideoBridge] drawImage failed', e, {
@@ -107,6 +101,7 @@ class VideoBridge {
         }
       }
     }
+    return false;
   }
 
   destroy(): void {
@@ -164,7 +159,7 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
       background: backgroundColor.value,
       antialias: false,
       autoDensity: true,
-      resolution: window.devicePixelRatio,
+      resolution: 1, // Fixed: avoid 4x GPU overhead on HiDPI screens
       powerPreference: 'high-performance',
       width: canvasContainerEl.value.clientWidth || 800,
       height: canvasContainerEl.value.clientHeight || 600,
@@ -186,9 +181,10 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
         if (!sprite.visible) return;
         const bridge = bridges.get(id);
         if (!bridge) return;
-        bridge.drawFrame();
-        const tex = textures.get(id);
-        if (tex) tex.source.update();
+        if (bridge.drawFrame()) {
+          const tex = textures.get(id);
+          if (tex) tex.source.update();
+        }
       });
     });
 
@@ -259,24 +255,34 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     });
   }
 
-  function createSprite(id: string) {
-    if (sprites.has(id)) return;
-    if (pendingTextureIds.has(id)) return;
+  function createSprite(id: string): Promise<void> {
+    if (sprites.has(id)) return Promise.resolve();
+    if (pendingTextureIds.has(id)) return Promise.resolve();
 
     const existingTexture = textures.get(id);
     if (existingTexture) {
       doCreateSprite(id, existingTexture);
-      return;
+      return Promise.resolve();
     }
 
     const video = videoPool.get(id);
-    if (!video) return;
+    if (!video) return Promise.resolve();
     pendingTextureIds.add(id);
 
-    createTextureForVideoAsync(id).then((texture) => {
+    return createTextureForVideoAsync(id).then((texture) => {
       pendingTextureIds.delete(id);
       if (!texture) return;
       doCreateSprite(id, texture);
+    });
+  }
+
+  let layoutScheduled = false;
+  function scheduleLayout() {
+    if (layoutScheduled) return;
+    layoutScheduled = true;
+    requestAnimationFrame(() => {
+      layoutScheduled = false;
+      layoutSprites();
     });
   }
 
@@ -287,7 +293,6 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     sprite.label = id;
     stageContainer?.addChild(sprite);
     sprites.set(id, sprite);
-    layoutSprites();
   }
 
   function removeSprite(id: string) {
@@ -307,49 +312,16 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
       bridge.destroy();
       bridges.delete(id);
     }
-    layoutSprites();
+    scheduleLayout();
   }
 
   function layoutSprites() {
     if (!app || !stageContainer) return;
 
-    const currentLayout = layout.value;
+    const { itemWidth, itemHeight, cols } = layout.value;
 
-    // ponytail: layout.value may have itemWidth=0 if ResizeObserver hasn't fired yet.
-    // Fallback: compute directly from container dimensions.
-    let itemWidth = currentLayout.itemWidth;
-    let itemHeight = currentLayout.itemHeight;
-    let cols = currentLayout.cols;
-
-    if (itemWidth <= 0 || itemHeight <= 0) {
-      const cw = canvasContainerEl.value?.clientWidth || 0;
-      const ch = canvasContainerEl.value?.clientHeight || 0;
-      if (cw <= 0 || ch <= 0) return;
-      const count = sprites.size;
-      if (count <= 0) return;
-      let best = { cols: 1, rows: 1, area: 0 };
-      for (let c = 1; c <= count; c++) {
-        const r = Math.ceil(count / c);
-        const totalGapX = Math.max(0, c - 1) * gap.value;
-        const totalGapY = Math.max(0, r - 1) * gap.value;
-        const aw = cw - totalGapX;
-        const ah = ch - totalGapY;
-        if (aw <= 0 || ah <= 0) continue;
-        let iw = aw / c;
-        let ih = iw / aspectRatio.value;
-        if (ih > ah / r) {
-          ih = ah / r;
-          iw = ih * aspectRatio.value;
-        }
-        const area = iw * ih;
-        if (area > best.area) {
-          best = { cols: c, rows: r, area };
-        }
-      }
-      cols = best.cols;
-      itemWidth = best.area > 0 ? Math.sqrt(best.area * aspectRatio.value) : cw / cols;
-      itemHeight = itemWidth / aspectRatio.value;
-    }
+    // Wait for useVideoWallLayout to provide valid dimensions
+    if (itemWidth <= 0 || itemHeight <= 0) return;
 
     if (focusedId) {
       sprites.forEach((sprite, id) => {
@@ -419,12 +391,18 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     [...sprites.keys()].forEach((id) => {
       if (!currentIds.has(id)) removeSprite(id);
     });
+    const createPromises: Promise<void>[] = [];
     currentIds.forEach((id) => {
       if (!sprites.has(id) && videoPool.has(id)) {
-        createSprite(id);
+        createPromises.push(createSprite(id));
       }
     });
-    layoutSprites();
+    // Layout once after all sprites are created
+    if (createPromises.length > 0) {
+      void Promise.all(createPromises).then(() => layoutSprites());
+    } else {
+      layoutSprites();
+    }
   }
 
   watch(targetFps, () => {
