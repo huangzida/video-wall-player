@@ -18,6 +18,10 @@ export interface CanvasWallPlayerProps {
   maxSkipAttempts?: number;
   showControls?: boolean;
   controlSize?: VideoWallControlSize;
+  /** Use direct Texture.from(video) instead of 2D canvas bridge.
+   *  Lower GPU/CPU overhead but may trigger Chrome glCopySubTextureCHROMIUM
+   *  errors on some setups. Default: false (use bridge). */
+  useTextureMode?: boolean;
 }
 
 export interface CanvasWallPlayerEmits {

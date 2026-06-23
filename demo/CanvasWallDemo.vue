@@ -24,6 +24,7 @@ const enableFocus = useStorage('canvas-demo-enable-focus', true);
 const autoSkipOnStall = useStorage('canvas-demo-auto-skip-on-stall', true);
 const stallThresholdMs = useStorage('canvas-demo-stall-threshold-ms', 500);
 const maxSkipAttempts = useStorage('canvas-demo-max-skip-attempts', 10);
+const useTextureMode = useStorage('canvas-demo-use-texture-mode', false);
 
 // ponytail: rotate among 20 test files — each stream gets its own file,
 // eliminating browser cache lock contention entirely.
@@ -62,6 +63,8 @@ const resources = computed(() => {
       :auto-skip-on-stall="autoSkipOnStall"
       :stall-threshold-ms="stallThresholdMs"
       :max-skip-attempts="maxSkipAttempts"
+      :use-texture-mode="useTextureMode"
+      :key="useTextureMode ? 'texture' : 'bridge'"
       @error="console.error"
       @ready="console.log('[CanvasWall] All streams ready')"
       @stream-ready="(id: string) => console.log('[CanvasWall] Stream ready:', id)"
@@ -105,6 +108,10 @@ const resources = computed(() => {
       <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
         <input v-model="autoSkipOnStall" type="checkbox" />
         <span>Auto Skip on Stall</span>
+      </label>
+      <label style="display: flex; align-items: center; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); cursor: pointer;">
+        <input v-model="useTextureMode" type="checkbox" />
+        <span>Texture Mode (no bridge)</span>
       </label>
     </div>
   </div>

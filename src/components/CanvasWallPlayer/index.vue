@@ -35,6 +35,7 @@ const props = withDefaults(defineProps<CanvasWallPlayerProps>(), {
   maxSkipAttempts: DEFAULT_MAX_SKIP_ATTEMPTS,
   showControls: true,
   controlSize: 'normal' as VideoWallControlSize,
+  useTextureMode: false,
 });
 
 const emit = defineEmits<{
@@ -58,6 +59,7 @@ const {
   gap,
   layoutMode,
   enableFocus,
+  useTextureMode,
 } = toRefs(props);
 
 // --- Video sources ---
@@ -88,6 +90,7 @@ const canvasState = useCanvasWall({
   gap,
   layoutMode,
   enableFocus,
+  useTextureMode,
 });
 
 // --- Interaction ---

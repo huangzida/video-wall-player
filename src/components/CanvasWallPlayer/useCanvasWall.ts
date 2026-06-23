@@ -26,6 +26,7 @@ interface UseCanvasWallOptions {
   gap: Ref<number>;
   layoutMode: Ref<VideoWallLayoutMode>;
   enableFocus: Ref<boolean>;
+  useTextureMode: Ref<boolean>;
 }
 
 // ponytail: VideoBridge — 2D canvas intermediate to avoid Chrome's glCopySubTextureCHROMIUM
@@ -126,6 +127,7 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     aspectRatio,
     gap,
     layoutMode,
+    useTextureMode,
   } = options;
 
   const canvasContainerEl = ref<HTMLElement | null>(null);
@@ -176,13 +178,15 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     // ponytail: Ticker callback draws all video frames to their bridge canvases, then
     // manually updates PixiJS texture sources. CanvasSource does NOT auto-detect canvas
     // content changes, so we must call source.update() after each drawImage().
+    // In texture mode, PixiJS VideoSource auto-updates — no manual work needed.
     // Performance: skip hidden sprites (e.g. when focused on one) and paused videos.
     app.ticker.add(() => {
+      if (useTextureMode.value) return; // VideoSource handles updates automatically
       sprites.forEach((sprite, id) => {
-        if (!sprite.visible) return; // skip hidden sprites in focus mode
+        if (!sprite.visible) return;
         const bridge = bridges.get(id);
         if (!bridge) return;
-        bridge.drawFrame(); // internally skips if video.paused
+        bridge.drawFrame();
         const tex = textures.get(id);
         if (tex) tex.source.update();
       });
@@ -213,6 +217,30 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     const video = videoPool.get(id);
     if (!video) return Promise.resolve(null);
 
+    // Texture mode: direct Texture.from(video), let PixiJS VideoSource handle updates
+    if (useTextureMode.value) {
+      return new Promise((resolve) => {
+        const onReady = () => {
+          video.removeEventListener('loadeddata', onReady);
+          if (video.videoWidth && video.videoHeight) {
+            const texture = Texture.from(video);
+            textures.set(id, texture);
+            resolve(texture);
+          } else {
+            resolve(null);
+          }
+        };
+        if (video.readyState >= 2 && video.videoWidth > 0) {
+          const texture = Texture.from(video);
+          textures.set(id, texture);
+          resolve(texture);
+        } else {
+          video.addEventListener('loadeddata', onReady);
+        }
+      });
+    }
+
+    // Bridge mode: 2D canvas intermediate to avoid Chrome video texture bug
     const bridge = new VideoBridge(video);
     bridges.set(id, bridge);
 
