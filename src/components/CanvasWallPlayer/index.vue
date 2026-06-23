@@ -252,14 +252,14 @@ watch(
   >
     <!-- Hidden video container -->
     <div
-      ref="videoState.containerEl"
+      :ref="(el) => { videoState.containerEl.value = el as HTMLElement | null }"
       class="absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden"
       aria-hidden="true"
     ></div>
 
     <!-- Canvas container -->
     <div
-      ref="canvasState.canvasContainerEl"
+      :ref="(el) => { canvasState.canvasContainerEl.value = el as HTMLElement | null }"
       class="absolute inset-0"
       @pointerdown="handleCanvasPointerDown"
     ></div>
