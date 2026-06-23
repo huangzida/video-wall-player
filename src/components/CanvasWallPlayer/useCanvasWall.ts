@@ -40,6 +40,7 @@ class VideoBridge {
   private ctx: CanvasRenderingContext2D;
   private rafId: number | null = null;
   private onFirstFrame: (() => void) | null = null;
+  private _drawErrorLogged = false;
 
   constructor(video: HTMLVideoElement) {
     this.video = video;
@@ -79,7 +80,21 @@ class VideoBridge {
   // Draw current video frame to the bridge canvas. Called every render tick.
   drawFrame(): void {
     if (this.video.readyState >= 2) {
-      this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+      try {
+        this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+      } catch (e) {
+        // ponytail: log once per bridge to avoid console spam
+        if (!this._drawErrorLogged) {
+          this._drawErrorLogged = true;
+          console.error('[VideoBridge] drawImage failed', e, {
+            readyState: this.video.readyState,
+            videoWidth: this.video.videoWidth,
+            videoHeight: this.video.videoHeight,
+            canvasW: this.canvas.width,
+            canvasH: this.canvas.height,
+          });
+        }
+      }
     }
   }
 
@@ -148,10 +163,15 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     stageContainer = new Container();
     app.stage.addChild(stageContainer);
 
-    // ponytail: Ticker callback draws all video frames to their bridge canvases before render.
-    // CanvasSource detects DOM canvas changes and auto-updates the PixiJS texture.
+    // ponytail: Ticker callback draws all video frames to their bridge canvases, then
+    // manually updates PixiJS texture sources. CanvasSource does NOT auto-detect canvas
+    // content changes, so we must call source.update() after each drawImage().
     app.ticker.add(() => {
-      bridges.forEach((bridge) => bridge.drawFrame());
+      bridges.forEach((bridge, id) => {
+        bridge.drawFrame();
+        const tex = textures.get(id);
+        if (tex) tex.source.update();
+      });
     });
 
     applyTargetFps();
@@ -183,7 +203,6 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     bridges.set(id, bridge);
 
     return bridge.waitForFirstFrame().then(() => {
-      // Create texture from the 2D canvas (CanvasSource), not from video directly
       const texture = Texture.from(bridge.canvas);
       textures.set(id, texture);
       return texture;
