@@ -67,7 +67,9 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
   async function initApp() {
     if (!canvasContainerEl.value) return;
 
-    app = new Application({
+    // ponytail: PixiJS v8 requires async init(), constructor no longer accepts options
+    app = new Application();
+    await app.init({
       background: backgroundColor.value,
       antialias: false,
       autoDensity: true,

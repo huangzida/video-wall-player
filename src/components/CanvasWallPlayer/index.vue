@@ -242,7 +242,7 @@ watch(
 <template>
   <div
     ref="wallRef"
-    class="canvas-wall-player relative w-full h-full bg-black overflow-hidden"
+    class="canvas-wall-player video-wall-player relative w-full h-full bg-black overflow-hidden"
   >
     <!-- Hidden video container -->
     <div
