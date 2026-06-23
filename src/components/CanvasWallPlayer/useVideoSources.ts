@@ -270,6 +270,35 @@ export function useVideoSources(options: UseVideoSourcesOptions): VideoSourceSta
         return;
       }
 
+      // ponytail: skip reload if same src already loaded or loading
+      if (video.src === chunkUrl || video.src === new URL(chunkUrl, location.href).href) {
+        if (video.readyState >= 2) {
+          onStreamReady(r.id);
+          resolve();
+          return;
+        }
+        // Same src but not ready yet — wait for existing load
+        let settled = false;
+        const onReady = () => {
+          if (settled) return;
+          settled = true;
+          video.removeEventListener('canplay', onReady);
+          video.removeEventListener('error', onErr);
+          onStreamReady(r.id);
+          resolve();
+        };
+        const onErr = () => {
+          if (settled) return;
+          settled = true;
+          video.removeEventListener('canplay', onReady);
+          video.removeEventListener('error', onErr);
+          resolve();
+        };
+        video.addEventListener('canplay', onReady);
+        video.addEventListener('error', onErr);
+        return;
+      }
+
       let settled = false;
       const onCanPlayOnce = () => {
         if (settled) return;
