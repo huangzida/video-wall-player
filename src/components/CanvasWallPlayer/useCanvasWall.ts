@@ -133,6 +133,8 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
   const sprites = new Map<string, Sprite>();
   const textures = new Map<string, Texture>();
   const bridges = new Map<string, VideoBridge>();
+  // Combined entry for ticker hot path — avoids 2x Map.get per frame per sprite
+  const spriteEntries = new Map<string, { sprite: Sprite; bridge?: VideoBridge; texture?: Texture }>();
   let focusedId: string | null = null;
   let resizeObserver: ResizeObserver | null = null;
 
@@ -177,13 +179,11 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     // Performance: skip hidden sprites (e.g. when focused on one) and paused videos.
     app.ticker.add(() => {
       if (useTextureMode.value) return; // VideoSource handles updates automatically
-      sprites.forEach((sprite, id) => {
-        if (!sprite.visible) return;
-        const bridge = bridges.get(id);
-        if (!bridge) return;
-        if (bridge.drawFrame()) {
-          const tex = textures.get(id);
-          if (tex) tex.source.update();
+      spriteEntries.forEach((entry) => {
+        if (!entry.sprite.visible) return;
+        if (!entry.bridge || !entry.texture) return;
+        if (entry.bridge.drawFrame()) {
+          entry.texture.source.update();
         }
       });
     });
@@ -293,6 +293,7 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     sprite.label = id;
     stageContainer?.addChild(sprite);
     sprites.set(id, sprite);
+    spriteEntries.set(id, { sprite, bridge: bridges.get(id), texture });
   }
 
   function removeSprite(id: string) {
@@ -312,6 +313,7 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
       bridge.destroy();
       bridges.delete(id);
     }
+    spriteEntries.delete(id);
     scheduleLayout();
   }
 
@@ -441,6 +443,7 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     sprites.clear();
     textures.forEach((t) => t.destroy(true));
     textures.clear();
+    spriteEntries.clear();
     if (app) {
       app.destroy(true);
       app = null;

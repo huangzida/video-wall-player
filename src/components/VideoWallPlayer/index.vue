@@ -131,7 +131,7 @@ watch(
       }
     }
   },
-  { immediate: true, deep: true }
+  { immediate: true }
 );
 
 onMounted(() => {
@@ -157,10 +157,7 @@ onUnmounted(() => {
 function handleWaiting(id: string) {
   bufferingStates.value[id] = true;
 
-  console.log(`[DEBUG] ${id}: *** WAITING EVENT FIRED ***`);
-
   if (props.autoSkipOnStall && !stallStates.value[id]) {
-    console.log(`[DEBUG] ${id}: Creating stall state on waiting (initial)`);
     stallStates.value[id] = {
       isStalled: false,
       pendingSkip: false,
@@ -175,10 +172,7 @@ function handlePlaying(id: string) {
   bufferingStates.value[id] = false;
   errorStates.value[id] = false;
 
-  console.log(`[DEBUG] ${id}: *** PLAYING EVENT FIRED (native) ***`);
-
   if (stallStates.value[id]) {
-    console.log(`[DEBUG] ${id}: Deleting stall state on playing event`);
     delete stallStates.value[id];
   }
 }
@@ -251,8 +245,6 @@ function performAutoSkip(id: string) {
   const skipAmount = baseSkipAmount * multiplier;
   const newTime = Math.min(media.duration || Infinity, media.currentTime + skipAmount);
 
-  console.log(`[AutoSkip] ${id}: Skip ${state.skipCount + 1}/${props.maxSkipAttempts}, ${media.currentTime.toFixed(2)}s -> ${newTime.toFixed(2)}s (${multiplier}x)`);
-
   state.isStalled = false;
   state.skipCount++;
   state.lastRetryTime = Date.now();
@@ -261,57 +253,9 @@ function performAutoSkip(id: string) {
   media.load();
   media.currentTime = newTime;
 
-  let recoveryTimeout: ReturnType<typeof setTimeout> | null = null;
-
-  let playCalled = false;
-
-  const onCanPlay = () => {
-    media.removeEventListener('canplay', onCanPlay);
-    if (playCalled) return;
-    playCalled = true;
-    console.log(`[AutoSkip] ${id}: canplay fired, calling play()`);
-    const playPromise = media.play();
-    if (playPromise !== undefined) {
-      playPromise.then(() => {
-        console.log(`[AutoSkip] ${id}: play() succeeded`);
-      }).catch((err) => {
-        console.log(`[AutoSkip] ${id}: play() failed: ${err.message}`);
-      });
-    }
-  };
-
-  const onPlaying = () => {
-    media.removeEventListener('canplay', onCanPlay);
-    media.removeEventListener('waiting', onWaiting);
-    media.removeEventListener('playing', onPlaying);
-    if (recoveryTimeout) clearTimeout(recoveryTimeout);
-    console.log(`[AutoSkip] ${id}: Recovered successfully at ${media.currentTime.toFixed(2)}s`);
-    delete stallStates.value[id];
-  };
-
-  const onWaiting = () => {
-    media.removeEventListener('canplay', onCanPlay);
-    media.removeEventListener('waiting', onWaiting);
-    if (recoveryTimeout) clearTimeout(recoveryTimeout);
-    if (stallStates.value[id]) {
-      stallStates.value[id].isStalled = true;
-      console.log(`[AutoSkip] ${id}: Fell back to waiting`);
-    }
-  };
-
-  media.addEventListener('canplay', onCanPlay);
-  media.addEventListener('playing', onPlaying);
-  media.addEventListener('waiting', onWaiting);
-
-  recoveryTimeout = setTimeout(() => {
-    media.removeEventListener('canplay', onCanPlay);
-    media.removeEventListener('playing', onPlaying);
-    media.removeEventListener('waiting', onWaiting);
-    if (stallStates.value[id]) {
-      stallStates.value[id].isStalled = true;
-      console.log(`[AutoSkip] ${id}: Recovery timeout`);
-    }
-  }, 5000);
+  // Resume playback — stall interval will re-detect if still stuck
+  const playPromise = media.play();
+  if (playPromise) playPromise.catch(() => {});
 }
 
 function handleSingleFullscreen(id: string) {
