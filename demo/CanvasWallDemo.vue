@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useStorage } from '@vueuse/core';
 import { CanvasWallPlayer } from '../src/index';
 import type { VideoWallLayoutMode, VideoWallControlSize } from '../src/components/VideoWallPlayer/types';
 
-// ponytail: use local test.mp4 for reliable testing without network dependency
+// ponytail: use local test.mp4 for reliable testing without network dependency.
+// Multiple copies (test.mp4, test2.mp4, ...) reduce browser cache lock contention
+// when 20 streams request the same URL simultaneously.
 const testUrl = './test.mp4';
-const testDuration = 30;
+const testDuration = 90; // actual duration of test.mp4 in seconds
 
 const videoCount = useStorage('canvas-demo-video-count', 20);
 const targetFps = useStorage('canvas-demo-target-fps', 15);
@@ -23,11 +25,17 @@ const autoSkipOnStall = useStorage('canvas-demo-auto-skip-on-stall', true);
 const stallThresholdMs = useStorage('canvas-demo-stall-threshold-ms', 500);
 const maxSkipAttempts = useStorage('canvas-demo-max-skip-attempts', 10);
 
+// ponytail: rotate among 10 test files to reduce cache lock contention
+const testUrls = [
+  './test.mp4', './test2.mp4', './test3.mp4', './test4.mp4', './test5.mp4',
+  './test6.mp4', './test7.mp4', './test8.mp4', './test9.mp4', './test10.mp4',
+];
+
 const resources = computed(() => {
   return Array.from({ length: videoCount.value }, (_, i) => ({
     id: `res-${i + 1}`,
     name: `Stream ${i + 1}`,
-    chunkUrls: [testUrl],
+    chunkUrls: [testUrls[i % testUrls.length]],
     durations: [testDuration],
   }));
 });
