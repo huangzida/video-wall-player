@@ -74,7 +74,7 @@ export function useVideoSources(options: UseVideoSourcesOptions): VideoSourceSta
   // --- Video element creation ---
   function createVideoElement(id: string): HTMLVideoElement {
     const video = document.createElement('video');
-    video.preload = 'none';
+    video.preload = 'metadata'; // ponytail: load metadata only, not full data
     video.muted = true;
     video.playsInline = true;
     video.style.position = 'absolute';

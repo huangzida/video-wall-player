@@ -25,10 +25,13 @@ const autoSkipOnStall = useStorage('canvas-demo-auto-skip-on-stall', true);
 const stallThresholdMs = useStorage('canvas-demo-stall-threshold-ms', 500);
 const maxSkipAttempts = useStorage('canvas-demo-max-skip-attempts', 10);
 
-// ponytail: rotate among 10 test files to reduce cache lock contention
+// ponytail: rotate among 20 test files — each stream gets its own file,
+// eliminating browser cache lock contention entirely.
 const testUrls = [
   './test.mp4', './test2.mp4', './test3.mp4', './test4.mp4', './test5.mp4',
   './test6.mp4', './test7.mp4', './test8.mp4', './test9.mp4', './test10.mp4',
+  './test11.mp4', './test12.mp4', './test13.mp4', './test14.mp4', './test15.mp4',
+  './test16.mp4', './test17.mp4', './test18.mp4', './test19.mp4', './test20.mp4',
 ];
 
 const resources = computed(() => {

@@ -78,7 +78,10 @@ class VideoBridge {
   }
 
   // Draw current video frame to the bridge canvas. Called every render tick.
+  // ponytail: Only draw when video is actively playing. When paused, skip to avoid
+  // triggering unnecessary range requests for video data the user hasn't requested.
   drawFrame(): void {
+    if (this.video.paused) return;
     if (this.video.readyState >= 2) {
       try {
         this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
