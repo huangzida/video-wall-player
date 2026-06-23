@@ -2,8 +2,11 @@
 import { ref, computed } from 'vue';
 import { useStorage } from '@vueuse/core';
 import { VideoWallPlayer } from '../dist/auto.mjs';
+import CanvasWallDemo from './CanvasWallDemo.vue';
 import DemoSettings from './components/DemoSettings.vue';
 import type { VideoWallTag, VideoWallTheme, VideoWallControlSize, VideoWallLayoutMode } from '../src/components/VideoWallPlayer/types';
+
+const useCanvasMode = useStorage('demo-use-canvas-mode', false);
 
 // const testUrl = '//sf1-cdn-tos.huoshanstatic.com/obj/media-fe/xgplayer_doc_video/mp4/xgplayer-demo-360p.mp4';
 // const testDuration = 90;
@@ -61,7 +64,18 @@ const tags = ref<VideoWallTag[]>([
 
 <template>
   <div class="demo-root">
+    <!-- Mode switcher -->
+    <button
+      class="fixed top-2 left-2 z-[200] px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg shadow-lg hover:bg-blue-700 transition-colors"
+      @click="useCanvasMode = !useCanvasMode"
+    >
+      {{ useCanvasMode ? 'Canvas Mode (click for DOM)' : 'DOM Mode (click for Canvas)' }}
+    </button>
+
+    <CanvasWallDemo v-if="useCanvasMode" />
+
     <VideoWallPlayer
+      v-else
       :resources="resources as any"
       title="Demo Wall"
       :autoplay="autoplay"
