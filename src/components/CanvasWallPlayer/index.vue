@@ -245,10 +245,11 @@ watch(
       aria-hidden="true"
     ></div>
 
-    <!-- Canvas container -->
+    <!-- Canvas container — bottom padding to avoid control bar overlap -->
     <div
       :ref="(el) => { canvasState.canvasContainerEl.value = el as HTMLElement | null }"
-      class="absolute inset-0"
+      class="absolute top-0 left-0 right-0"
+      :style="{ bottom: showControls ? '48px' : '0' }"
       @pointerdown="handleCanvasPointerDown"
     ></div>
 
