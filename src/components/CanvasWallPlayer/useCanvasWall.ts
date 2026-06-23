@@ -104,14 +104,18 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     layoutSprites();
   }
 
+  // Set of ids waiting for first video frame before texture creation
+  const pendingFrameIds = new Set<string>();
+
   // --- Texture/Sprite management ---
   function createTextureForVideo(id: string): Texture | null {
     const video = videoPool.get(id);
     if (!video) return null;
 
-    // ponytail: Require video to be playing so GPU texture upload is driven by VideoSource.
-    // Creating texture before play() causes GL_INVALID_OPERATION: glCopySubTextureCHROMIUM.
-    if (video.paused) return null;
+    // ponytail: Require video first frame decoded (requestVideoFrameCallback fired)
+    // before creating texture. GPU texture storage must be allocated by VideoSource
+    // on first frame, otherwise glCopySubTextureCHROMIUM fails with GL_INVALID_OPERATION.
+    if (video.readyState < 2) return null; // HAVE_CURRENT_DATA
     if (!video.videoWidth || !video.videoHeight) return null;
 
     const texture = Texture.from(video);
@@ -121,16 +125,33 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
 
   function createSprite(id: string) {
     if (sprites.has(id)) return;
+    if (pendingFrameIds.has(id)) return; // already waiting
+
     const texture = textures.get(id) || createTextureForVideo(id);
     if (!texture) {
-      // Video not playing yet — retry on 'playing' event when GPU texture is ready
+      // Wait for first video frame using requestVideoFrameCallback (most reliable),
+      // fallback to 'loadeddata' event on older browsers
       const video = videoPool.get(id);
-      if (video) {
-        const onPlaying = () => {
-          video.removeEventListener('playing', onPlaying);
-          createSprite(id);
-        };
-        video.addEventListener('playing', onPlaying);
+      if (!video) return;
+      pendingFrameIds.add(id);
+
+      const tryCreate = () => {
+        pendingFrameIds.delete(id);
+        createSprite(id);
+      };
+
+      // ponytail: requestVideoFrameCallback fires when a frame is ready for display.
+      // This is the earliest point where GPU texture upload is guaranteed to succeed.
+      const videoEl = video as HTMLVideoElement & {
+        requestVideoFrameCallback?: (cb: () => void) => void;
+      };
+      if (typeof videoEl.requestVideoFrameCallback === 'function') {
+        videoEl.requestVideoFrameCallback(tryCreate);
+      } else {
+        video.addEventListener('loadeddata', function onLoadedData() {
+          video.removeEventListener('loadeddata', onLoadedData);
+          tryCreate();
+        });
       }
       return;
     }
