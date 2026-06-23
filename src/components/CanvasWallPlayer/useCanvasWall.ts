@@ -1,5 +1,5 @@
 import { ref, watch, onUnmounted, type Ref, computed } from 'vue';
-import { Application, Sprite, Texture, VideoSource, Container } from 'pixi.js';
+import { Application, Sprite, Texture, Container } from 'pixi.js';
 import { useVideoWallLayout } from '../../hooks/useVideoWallLayout';
 import type { VideoWallLayoutMode } from '../VideoWallPlayer/types';
 
@@ -46,7 +46,6 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
   const sprites = new Map<string, Sprite>();
   const textures = new Map<string, Texture>();
   let focusedId: string | null = null;
-  let renderTimer: ReturnType<typeof setInterval> | null = null;
   let resizeObserver: ResizeObserver | null = null;
 
   const itemCount = computed(() => resources.value.length);
@@ -67,7 +66,6 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
   async function initApp() {
     if (!canvasContainerEl.value) return;
 
-    // ponytail: PixiJS v8 requires async init(), constructor no longer accepts options
     app = new Application();
     await app.init({
       background: backgroundColor.value,
@@ -84,20 +82,17 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     stageContainer = new Container();
     app.stage.addChild(stageContainer);
 
-    // Stop auto-render, use manual render at target fps
-    app.ticker.stop();
-    startRenderLoop();
+    // ponytail: Use PixiJS native ticker.maxFPS instead of manual setInterval.
+    // VideoSource updates via Ticker.shared, so the ticker must stay running
+    // for textures to update properly. maxFPS throttles both render + texture update.
+    applyTargetFps();
 
     isReady.value = true;
   }
 
-  function startRenderLoop() {
-    if (renderTimer) clearInterval(renderTimer);
-    const fps = Math.max(1, targetFps.value);
-    const interval = 1000 / fps;
-    renderTimer = setInterval(() => {
-      if (app) app.render();
-    }, interval);
+  function applyTargetFps() {
+    if (!app) return;
+    app.ticker.maxFPS = Math.max(1, targetFps.value);
   }
 
   function resizeCanvas() {
@@ -115,14 +110,10 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     if (!video) return null;
 
     // ponytail: VideoSource requires video to have valid dimensions (loadedmetadata).
-    // Creating texture before metadata fires causes WebGL GL_INVALID_OPERATION errors.
+    // Use Texture.from() which handles VideoSource creation internally.
     if (!video.videoWidth || !video.videoHeight) return null;
 
-    const source = new VideoSource({
-      resource: video,
-      autoPlay: false,
-    });
-    const texture = new Texture({ source });
+    const texture = Texture.from(video);
     textures.set(id, texture);
     return texture;
   }
@@ -273,7 +264,7 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
 
   // --- Watch targetFps changes ---
   watch(targetFps, () => {
-    startRenderLoop();
+    applyTargetFps();
   });
 
   // --- Watch backgroundColor changes ---
@@ -300,10 +291,6 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
 
   // --- Cleanup ---
   function destroy() {
-    if (renderTimer) {
-      clearInterval(renderTimer);
-      renderTimer = null;
-    }
     if (resizeObserver) {
       resizeObserver.disconnect();
       resizeObserver = null;
