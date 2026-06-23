@@ -227,10 +227,21 @@ export function useVideoSources(options: UseVideoSourcesOptions): VideoSourceSta
     const maxIndex = Math.max(0, (primary?.chunkUrls.length || 1) - 1);
     const safeChunkIndex = Math.max(0, Math.min(chunkIndex, maxIndex));
 
+    // ponytail: Pause all before seeking to prevent async drift.
+    // Each video's seek completes at different times; if some are still playing
+    // while others seek, they drift out of sync.
+    pauseAll();
+
     suppressTimeUpdate = true;
     try {
       activeChunkIndex.value = safeChunkIndex;
-      // Set src for all videos to the new chunk
+
+      const segDur = primary?.durations[safeChunkIndex] || 0;
+      const safeTime = Math.max(0, Math.min(localTime, Math.max(0, segDur - 0.05)));
+      const targetTime = Number.isFinite(safeTime) ? safeTime : 0;
+
+      // Set src + seek for all videos, collect seek promises
+      const seekPromises: Promise<void>[] = [];
       resources.value.forEach((r) => {
         const video = videoPool.get(r.id);
         if (!video) return;
@@ -239,10 +250,23 @@ export function useVideoSources(options: UseVideoSourcesOptions): VideoSourceSta
           video.src = url;
           video.load();
         }
-        const segDur = primary?.durations[safeChunkIndex] || video.duration || 0;
-        const safeTime = Math.max(0, Math.min(localTime, Math.max(0, segDur - 0.05)));
-        video.currentTime = Number.isFinite(safeTime) ? safeTime : 0;
+        // ponytail: wait for each video's 'seeked' event to ensure all reach
+        // the same position before playback resumes.
+        seekPromises.push(new Promise<void>((resolve) => {
+          const onSeeked = () => {
+            video.removeEventListener('seeked', onSeeked);
+            resolve();
+          };
+          video.addEventListener('seeked', onSeeked);
+          video.currentTime = targetTime;
+        }));
       });
+
+      // Wait for all videos to finish seeking (with 3s timeout fallback)
+      await Promise.race([
+        Promise.allSettled(seekPromises),
+        new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+      ]);
 
       applySettings();
 
@@ -255,8 +279,6 @@ export function useVideoSources(options: UseVideoSourcesOptions): VideoSourceSta
 
     if (autoPlay) {
       void playAll();
-    } else {
-      pauseAll();
     }
   }
 

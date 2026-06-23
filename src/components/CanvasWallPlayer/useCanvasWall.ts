@@ -43,11 +43,17 @@ class VideoBridge {
   private onFirstFrame: (() => void) | null = null;
   private _drawErrorLogged = false;
 
-  constructor(video: HTMLVideoElement) {
+  constructor(video: HTMLVideoElement, maxBridgeWidth = 320) {
     this.video = video;
+    // ponytail: Downscale bridge canvas to maxBridgeWidth for performance.
+    // A 320x180 tile doesn't need a 640x360 bridge — halving resolution
+    // cuts drawImage + GPU upload cost by ~4x per frame.
+    const srcW = video.videoWidth || 16;
+    const srcH = video.videoHeight || 16;
+    const scale = Math.min(1, maxBridgeWidth / srcW);
     this.canvas = document.createElement('canvas');
-    this.canvas.width = video.videoWidth || 16;
-    this.canvas.height = video.videoHeight || 16;
+    this.canvas.width = Math.round(srcW * scale);
+    this.canvas.height = Math.round(srcH * scale);
     const ctx = this.canvas.getContext('2d', { alpha: false });
     if (!ctx) throw new Error('2D context unavailable');
     this.ctx = ctx;
@@ -170,9 +176,13 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     // ponytail: Ticker callback draws all video frames to their bridge canvases, then
     // manually updates PixiJS texture sources. CanvasSource does NOT auto-detect canvas
     // content changes, so we must call source.update() after each drawImage().
+    // Performance: skip hidden sprites (e.g. when focused on one) and paused videos.
     app.ticker.add(() => {
-      bridges.forEach((bridge, id) => {
-        bridge.drawFrame();
+      sprites.forEach((sprite, id) => {
+        if (!sprite.visible) return; // skip hidden sprites in focus mode
+        const bridge = bridges.get(id);
+        if (!bridge) return;
+        bridge.drawFrame(); // internally skips if video.paused
         const tex = textures.get(id);
         if (tex) tex.source.update();
       });
