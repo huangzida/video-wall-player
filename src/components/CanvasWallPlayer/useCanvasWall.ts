@@ -157,7 +157,43 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     if (!app || !stageContainer) return;
 
     const currentLayout = layout.value;
-    if (currentLayout.itemWidth <= 0 || currentLayout.itemHeight <= 0) return;
+    
+    // ponytail: layout.value may have itemWidth=0 if ResizeObserver hasn't fired yet.
+    // Fallback: compute directly from container dimensions.
+    let itemWidth = currentLayout.itemWidth;
+    let itemHeight = currentLayout.itemHeight;
+    let cols = currentLayout.cols;
+    
+    if (itemWidth <= 0 || itemHeight <= 0) {
+      const cw = canvasContainerEl.value?.clientWidth || 0;
+      const ch = canvasContainerEl.value?.clientHeight || 0;
+      if (cw <= 0 || ch <= 0) return;
+      const count = sprites.size;
+      if (count <= 0) return;
+      // Simple auto layout: find best cols/rows
+      let best = { cols: 1, rows: 1, area: 0 };
+      for (let c = 1; c <= count; c++) {
+        const r = Math.ceil(count / c);
+        const totalGapX = Math.max(0, c - 1) * gap.value;
+        const totalGapY = Math.max(0, r - 1) * gap.value;
+        const aw = cw - totalGapX;
+        const ah = ch - totalGapY;
+        if (aw <= 0 || ah <= 0) continue;
+        let iw = aw / c;
+        let ih = iw / aspectRatio.value;
+        if (ih > ah / r) {
+          ih = ah / r;
+          iw = ih * aspectRatio.value;
+        }
+        const area = iw * ih;
+        if (area > best.area) {
+          best = { cols: c, rows: r, area };
+        }
+      }
+      cols = best.cols;
+      itemWidth = best.area > 0 ? Math.sqrt(best.area * aspectRatio.value) : cw / cols;
+      itemHeight = itemWidth / aspectRatio.value;
+    }
 
     if (focusedId) {
       // Focused mode: only show focused sprite full-size
@@ -176,14 +212,14 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
 
     const spriteList = [...sprites.values()];
     spriteList.forEach((sprite, index) => {
-      const row = Math.floor(index / currentLayout.cols);
-      const col = index % currentLayout.cols;
+      const row = Math.floor(index / cols);
+      const col = index % cols;
       sprite.visible = true;
-      sprite.width = currentLayout.itemWidth;
-      sprite.height = currentLayout.itemHeight;
+      sprite.width = itemWidth;
+      sprite.height = itemHeight;
       sprite.position.set(
-        col * (currentLayout.itemWidth + gap.value),
-        row * (currentLayout.itemHeight + gap.value)
+        col * (itemWidth + gap.value),
+        row * (itemHeight + gap.value)
       );
     });
   }

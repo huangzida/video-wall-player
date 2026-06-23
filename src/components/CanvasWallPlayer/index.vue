@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, toRefs } from 'vue';
+import { ref, computed, onMounted, watch, toRefs, nextTick } from 'vue';
 import { useFullscreen, onKeyStroke } from '@vueuse/core';
 import PlayerControls from '../PlayerControls/index.vue';
 import { PLAYBACK_RATE_LEVELS } from '../../utils';
@@ -224,9 +224,15 @@ onKeyStroke('Escape', () => {
 
 // --- Lifecycle ---
 onMounted(async () => {
+  // Wait for DOM to have real dimensions
+  await nextTick();
   await canvasState.initApp();
   canvasState.attachResizeObserver();
+  // Force layout after init
+  canvasState.layoutSprites();
   await videoState.loadAll();
+  // Layout again after videos are ready and sprites created
+  canvasState.layoutSprites();
 });
 
 // Watch resources change
@@ -242,7 +248,7 @@ watch(
 <template>
   <div
     ref="wallRef"
-    class="canvas-wall-player video-wall-player relative w-full h-full bg-black overflow-hidden"
+    class="canvas-wall-player video-wall-player absolute inset-0 overflow-hidden bg-black"
   >
     <!-- Hidden video container -->
     <div
@@ -259,7 +265,7 @@ watch(
     ></div>
 
     <!-- Controls -->
-    <div v-if="showControls" class="relative z-50 pointer-events-auto">
+    <div v-if="showControls" class="absolute bottom-0 left-0 right-0 z-50 pointer-events-auto">
       <PlayerControls
         :is-playing="videoState.isPlaying.value"
         :current-time="videoState.currentTime.value"
