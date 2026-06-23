@@ -1,5 +1,5 @@
 import { ref, watch, onUnmounted, type Ref, computed } from 'vue';
-import { Application, Sprite, Texture, Container } from 'pixi.js';
+import { Application, Sprite, Texture, Container, VideoSource } from 'pixi.js';
 import { useVideoWallLayout } from '../../hooks/useVideoWallLayout';
 import type { VideoWallLayoutMode } from '../VideoWallPlayer/types';
 
@@ -104,66 +104,72 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     layoutSprites();
   }
 
-  // Set of ids waiting for first video frame before texture creation
-  const pendingFrameIds = new Set<string>();
+  // Set of ids waiting for texture creation
+  const pendingTextureIds = new Set<string>();
 
   // --- Texture/Sprite management ---
-  function createTextureForVideo(id: string): Texture | null {
+
+  // ponytail: PixiJS VideoSource manages its own readiness lifecycle (canplaythrough + loadedmetadata).
+  // We delegate to its async load() Promise to ensure GPU texture storage is allocated
+  // before the texture is used for rendering. This prevents GL_INVALID_OPERATION:
+  // glCopySubTextureCHROMIUM errors that occur when Chrome's video texture optimization
+  // tries to copy into uninitialized GPU storage.
+  function createTextureForVideoAsync(id: string): Promise<Texture | null> {
     const video = videoPool.get(id);
-    if (!video) return null;
+    if (!video) return Promise.resolve(null);
+    if (!video.videoWidth || !video.videoHeight) return Promise.resolve(null);
 
-    // ponytail: Require video first frame decoded (requestVideoFrameCallback fired)
-    // before creating texture. GPU texture storage must be allocated by VideoSource
-    // on first frame, otherwise glCopySubTextureCHROMIUM fails with GL_INVALID_OPERATION.
-    if (video.readyState < 2) return null; // HAVE_CURRENT_DATA
-    if (!video.videoWidth || !video.videoHeight) return null;
+    const source = new VideoSource({
+      resource: video,
+      autoPlay: false,
+      autoLoad: true,
+      updateFPS: 0,
+    });
 
-    const texture = Texture.from(video);
-    textures.set(id, texture);
-    return texture;
+    return source.load().then(() => {
+      const texture = new Texture({ source });
+      textures.set(id, texture);
+      return texture;
+    }).catch(() => null);
   }
 
   function createSprite(id: string) {
     if (sprites.has(id)) return;
-    if (pendingFrameIds.has(id)) return; // already waiting
+    if (pendingTextureIds.has(id)) return; // already waiting
 
-    const texture = textures.get(id) || createTextureForVideo(id);
-    if (!texture) {
-      // Wait for first video frame using requestVideoFrameCallback (most reliable),
-      // fallback to 'loadeddata' event on older browsers
-      const video = videoPool.get(id);
-      if (!video) return;
-      pendingFrameIds.add(id);
-
-      const tryCreate = () => {
-        pendingFrameIds.delete(id);
-        createSprite(id);
-      };
-
-      // ponytail: requestVideoFrameCallback fires when a frame is ready for display.
-      // This is the earliest point where GPU texture upload is guaranteed to succeed.
-      const videoEl = video as HTMLVideoElement & {
-        requestVideoFrameCallback?: (cb: () => void) => void;
-      };
-      if (typeof videoEl.requestVideoFrameCallback === 'function') {
-        videoEl.requestVideoFrameCallback(tryCreate);
-      } else {
-        video.addEventListener('loadeddata', function onLoadedData() {
-          video.removeEventListener('loadeddata', onLoadedData);
-          tryCreate();
-        });
-      }
+    // If texture already created, go straight to sprite
+    const existingTexture = textures.get(id);
+    if (existingTexture) {
+      doCreateSprite(id, existingTexture);
       return;
     }
 
+    const video = videoPool.get(id);
+    if (!video) return;
+    pendingTextureIds.add(id);
+
+    createTextureForVideoAsync(id).then((texture) => {
+      pendingTextureIds.delete(id);
+      if (!texture) return; // will retry on next syncSprites
+      doCreateSprite(id, texture);
+    });
+  }
+
+  function doCreateSprite(id: string, texture: Texture) {
+    if (sprites.has(id)) return;
     const sprite = new Sprite(texture);
     sprite.eventMode = 'static';
     sprite.label = id;
     stageContainer?.addChild(sprite);
     sprites.set(id, sprite);
+    // Force a render to allocate GPU texture storage immediately
+    app?.render();
     layoutSprites();
   }
 
+  // ponytail: PixiJS VideoSource.destroy() calls video.pause() + clears src, which would
+  // destroy our managed video elements. We never destroy the VideoSource - only the Texture
+  // wrapper. The video element lifecycle is managed by useVideoSources.
   function removeSprite(id: string) {
     const sprite = sprites.get(id);
     if (sprite) {
@@ -173,6 +179,7 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     }
     const texture = textures.get(id);
     if (texture) {
+      // Destroy texture wrapper but NOT the source (to avoid PixiJS killing the video element)
       texture.destroy(true);
       textures.delete(id);
     }
