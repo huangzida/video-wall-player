@@ -586,23 +586,45 @@ async function switchChunk(
   );
   const safeChunkIndex = Math.max(0, Math.min(chunkIndex, maxIndex));
 
+  // ponytail: Pause all before seeking to prevent async drift.
+  // Each video's seek completes at different times; if some are still playing
+  // while others seek, they drift out of sync.
+  pauseAllVideos();
+
   suppressTimeUpdate.value = true;
   try {
     activeChunkIndex.value = safeChunkIndex;
     await nextTick();
 
+    const chunkDuration =
+      segmentDurations.value[safeChunkIndex] || 0;
+    const safeLocalTime = Math.max(
+      0,
+      Math.min(localTime, Math.max(0, chunkDuration - 0.05))
+    );
+    const targetTime = Number.isFinite(safeLocalTime) ? safeLocalTime : 0;
+
+    // ponytail: Set currentTime for all videos and wait for all 'seeked' events.
+    // This ensures all videos reach the same position before playback resumes.
+    const seekPromises: Promise<void>[] = [];
     localResources.value.forEach((item) => {
       const media = mediaRefs.value[item.id];
       if (!media) return;
-
-      const chunkDuration =
-        segmentDurations.value[safeChunkIndex] || media.duration || 0;
-      const safeLocalTime = Math.max(
-        0,
-        Math.min(localTime, Math.max(0, chunkDuration - 0.05))
-      );
-      media.currentTime = Number.isFinite(safeLocalTime) ? safeLocalTime : 0;
+      seekPromises.push(new Promise<void>((resolve) => {
+        const onSeeked = () => {
+          media.removeEventListener('seeked', onSeeked);
+          resolve();
+        };
+        media.addEventListener('seeked', onSeeked);
+        media.currentTime = targetTime;
+      }));
     });
+
+    // Wait for all videos to finish seeking (with 3s timeout fallback)
+    await Promise.race([
+      Promise.allSettled(seekPromises),
+      new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+    ]);
 
     applyVideoSettings();
 
@@ -614,8 +636,6 @@ async function switchChunk(
 
   if (autoPlay) {
     void playAllVideos();
-  } else {
-    pauseAllVideos();
   }
 }
 

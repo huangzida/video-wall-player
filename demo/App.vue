@@ -10,8 +10,8 @@ const useCanvasMode = useStorage('demo-use-canvas-mode', false);
 
 // const testUrl = '//sf1-cdn-tos.huoshanstatic.com/obj/media-fe/xgplayer_doc_video/mp4/xgplayer-demo-360p.mp4';
 // const testDuration = 90;
-const testUrl = 'https://media.w3.org/2010/05/sintel/trailer.mp4';
-const testDuration = 52;
+const testUrl = './test.mp4';
+const testDuration = 90;
 // const testUrl = 'http://localhost:3000/2.mp4';
 // const testDuration = 301;
 const testPoster = 'https://media.w3.org/2010/05/sintel/poster.png';
