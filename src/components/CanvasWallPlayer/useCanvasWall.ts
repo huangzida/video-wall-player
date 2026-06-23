@@ -217,24 +217,28 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     const video = videoPool.get(id);
     if (!video) return Promise.resolve(null);
 
-    // Texture mode: direct Texture.from(video), let PixiJS VideoSource handle updates
+    // Texture mode: direct Texture.from(video), let PixiJS VideoSource handle updates.
+    // skipCache=true: avoid Cache returning stale/destroyed textures when video pool reuses elements.
     if (useTextureMode.value) {
       return new Promise((resolve) => {
-        const onReady = () => {
-          video.removeEventListener('loadeddata', onReady);
-          if (video.videoWidth && video.videoHeight) {
-            const texture = Texture.from(video);
-            textures.set(id, texture);
-            resolve(texture);
-          } else {
-            resolve(null);
-          }
-        };
-        if (video.readyState >= 2 && video.videoWidth > 0) {
-          const texture = Texture.from(video);
+        const createAndResolve = () => {
+          // VideoSource.load() auto-registers canplay/canplaythrough and resolves when isValid.
+          // We just need videoWidth>0 to ensure the VideoSource constructor gets valid dimensions.
+          const texture = Texture.from(video, true);
           textures.set(id, texture);
           resolve(texture);
+        };
+        if (video.readyState >= 2 && video.videoWidth > 0) {
+          createAndResolve();
         } else {
+          const onReady = () => {
+            video.removeEventListener('loadeddata', onReady);
+            if (video.videoWidth && video.videoHeight) {
+              createAndResolve();
+            } else {
+              resolve(null);
+            }
+          };
           video.addEventListener('loadeddata', onReady);
         }
       });
@@ -245,7 +249,7 @@ export function useCanvasWall(options: UseCanvasWallOptions): CanvasWallState {
     bridges.set(id, bridge);
 
     return bridge.waitForFirstFrame().then(() => {
-      const texture = Texture.from(bridge.canvas);
+      const texture = Texture.from(bridge.canvas, true);
       textures.set(id, texture);
       return texture;
     }).catch(() => {
