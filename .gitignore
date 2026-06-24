@@ -4,4 +4,4 @@ dist-ssr
 *.local
 .npmrc
 .DS_Store
-.pnpm-storedemo/test*.mp4
+.pnpm-store

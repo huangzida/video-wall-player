@@ -16,6 +16,7 @@ A powerful Vue 3 component for playing synchronized video streams in a responsiv
 - 🔊 **Audio Support**: Handles both video and audio chunks (.wav support).
 - 🎛️ **Advanced Controls**: Playback speed, seeking, volume control, fullscreen.
 - 🎨 **Tailwind CSS**: Styled with Tailwind CSS for easy customization.
+- 🖼️ **Canvas Mode** (`CanvasWallPlayer`): WebGL-based rendering via PixiJS for 50+ stream walls or per-frame effects. Includes seek-sync, frame-rate control, and a video-bridge fallback for Chrome stability.
 
 ## Installation
 
@@ -69,6 +70,59 @@ Notes:
 
 - **Scoped Tailwind utilities**: Tailwind utility rules are scoped under `.video-wall-player` (via `tailwind.config.ts` `important`) so they won't affect your app's global styles.
 - **No Tailwind preflight**: the library disables Tailwind preflight to avoid resetting your site's base element styles.
+
+## CanvasWallPlayer (Canvas / WebGL Mode)
+
+A WebGL-based alternative to `VideoWallPlayer`, powered by [PixiJS](https://pixijs.com/). Use it when you need **50+ simultaneous streams** or **per-frame visual effects**. For typical 1–20 stream playback, the DOM-based `VideoWallPlayer` offers better performance (near zero-copy GPU compositing).
+
+```vue
+<script setup lang="ts">
+import { CanvasWallPlayer } from 'video-wall-player';
+import 'video-wall-player/style.css';
+</script>
+
+<template>
+  <CanvasWallPlayer
+    :resources="resources"
+    :target-fps="15"
+    :batch-size="4"
+    :use-texture-mode="false"
+    @error="console.error"
+  />
+</template>
+```
+
+### CanvasWallPlayer Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `resources` | `VideoWallResource[]` | `[]` | Same resource format as `VideoWallPlayer`. |
+| `title` | `string` | `''` | Optional title. |
+| `targetFps` | `number` | `15` | Target render frame rate. Lower = less GPU load. |
+| `batchSize` | `number` | `4` | How many streams to load concurrently on init. |
+| `backgroundColor` | `number` | `0x000000` | Canvas background color (hex). |
+| `autoplay` | `boolean` | `false` | Autoplay on load. |
+| `muted` | `boolean` | `false` | Mute all streams. |
+| `loop` | `boolean` | `false` | Loop playback. |
+| `aspectRatio` | `number` | `16/9` | Tile aspect ratio. |
+| `gap` | `number` | `8` | Gap between tiles (px). |
+| `layoutMode` | `VideoWallLayoutMode` | `'auto'` | Grid layout mode. |
+| `enableFocus` | `boolean` | `true` | Double-click to spotlight a stream. |
+| `autoSkipOnStall` | `boolean` | `true` | Auto-recover stalled streams. |
+| `stallThresholdMs` | `number` | `500` | Stall detection threshold. |
+| `maxSkipAttempts` | `number` | `10` | Max recovery attempts. |
+| `showControls` | `boolean` | `true` | Show bottom control bar. |
+| `controlSize` | `VideoWallControlSize` | `'normal'` | Control bar size. |
+| `useTextureMode` | `boolean` | `false` | Use direct `Texture.from(video)` (lower overhead, may trigger Chrome `glCopySubTextureCHROMIUM` errors). Default bridge mode is more stable. |
+
+### DOM vs Canvas — Which to choose?
+
+| Scenario | Recommended |
+| --- | --- |
+| 1–20 streams, pure playback | **`VideoWallPlayer`** (DOM) — near zero-copy, browser-optimized compositing |
+| 50+ streams, DOM layout is slow | **`CanvasWallPlayer`** — single canvas, no DOM layout cost |
+| Per-frame effects (overlays, filters, blending) | **`CanvasWallPlayer`** — full WebGL shader access |
+| Maximum browser compatibility | **`VideoWallPlayer`** — no WebGL dependency |
 
 ## Props
 
