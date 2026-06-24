@@ -925,14 +925,15 @@ defineExpose({
               </div>
 
               <!-- Single Fullscreen Button -->
-              <button 
+              <div 
                 v-if="showTileFullscreen"
-                class="pointer-events-auto p-1.5 rounded-full bg-black/40 text-white/70 hover:text-white hover:bg-white/10 transition-colors border border-white/5 backdrop-blur-md"
+                style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; box-sizing: border-box; line-height: 1;"
+                class="pointer-events-auto rounded-md bg-black/40 text-white/70 hover:text-white hover:bg-white/10 transition-colors border border-white/5 backdrop-blur-md"
                 title="Fullscreen this tile"
                 @click.stop="handleSingleFullscreen(item.id)"
               >
                 <Maximize2 class="w-3.5 h-3.5" />
-              </button>
+              </div>
             </div>
 
             <!-- AutoSkip Loading Overlay -->
@@ -951,7 +952,8 @@ defineExpose({
             <!-- Mute Button -->
             <div
               v-if="showTileMute"
-              class="absolute bottom-3 right-3 z-30 cursor-pointer rounded-full bg-black/40 p-2 text-white/80 border border-white/5 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white hover:scale-110 active:scale-95"
+              style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; box-sizing: border-box; line-height: 1;"
+              class="absolute bottom-3 right-3 z-30 cursor-pointer rounded-md bg-black/40 text-white/80 border border-white/5 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white hover:scale-110 active:scale-95"
               :class="
                 fixedTileMeta
                   ? 'opacity-100'
