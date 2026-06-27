@@ -259,8 +259,11 @@ function performAutoSkip(id: string) {
 }
 
 function handleSingleFullscreen(id: string) {
-  const el = document.querySelector(`[data-tile-id="${id}"]`);
-  if (el && el.requestFullscreen) {
+  const el = document.querySelector(`[data-tile-id="${id}"]`) as HTMLElement | null;
+  if (!el || !el.requestFullscreen) return;
+  if (document.fullscreenElement === el) {
+    document.exitFullscreen().catch(() => {});
+  } else {
     el.requestFullscreen().catch(() => {});
   }
 }
