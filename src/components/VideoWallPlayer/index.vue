@@ -221,14 +221,25 @@ function setMediaRef(id: string, el: HTMLMediaElement | null) {
   sync.register(id, el);
 }
 
+// ponytail: memoize the ref callback per id so Vue sees a stable function
+// identity across renders. Without this, `:ref="setMediaVNodeRef(item.id)"`
+// returns a fresh closure each render → Vue's function-ref semantics call
+// old(null)+new(el) on every parent re-render (which happens ~4Hz during
+// playback because the `state` computed re-evaluates on timeupdate). The
+// old(null) path reached unregister→pause, which the idempotency guard in
+// setMediaRef can't retroactively prevent. Stable identity → Vue only invokes
+// the ref on actual mount/unmount. (Map grows per distinct id seen; bounded.)
+const mediaRefFns = new Map<string, (el: Element | ComponentPublicInstance | null) => void>();
 function setMediaVNodeRef(id: string) {
-  return (el: Element | ComponentPublicInstance | null) => {
-    if (el && el instanceof HTMLMediaElement) {
-      setMediaRef(id, el);
-    } else {
-      setMediaRef(id, null);
-    }
-  };
+  let fn = mediaRefFns.get(id);
+  if (!fn) {
+    fn = (el: Element | ComponentPublicInstance | null) => {
+      if (el && el instanceof HTMLMediaElement) setMediaRef(id, el);
+      else setMediaRef(id, null);
+    };
+    mediaRefFns.set(id, fn);
+  }
+  return fn;
 }
 
 // --- Declarative chunk switch (template re-binds :src via activeChunkIndex) ---

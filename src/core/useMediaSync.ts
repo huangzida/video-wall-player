@@ -164,13 +164,20 @@ export function useMediaSync(options: MediaSyncOptions = {}) {
       seedStall(id);
       if (elementStates[id]) elementStates[id].isBuffering = true;
     };
-    const onPlaying = () => {
-      // ponytail: playing = healthy; clear all per-element UI state for this id.
-      delete elementStates[id];
+    const markHealthy = () => {
+      // ponytail: clear UI/stall flags but PRESERVE skipCount + timing so the
+      // exponential backoff escalates across chronic micro-stall cycles (the
+      // 20+ decode-saturation pattern). Previously `delete elementStates[id]`
+      // here wiped skipCount on every canplay, so backoff never engaged.
+      // Decay happens in checkAndRecoverStall after sustained health.
+      const s = elementStates[id];
+      if (!s) return;
+      s.isStalled = false;
+      s.isBuffering = false;
+      s.isError = false;
     };
-    const onCanPlay = () => {
-      delete elementStates[id];
-    };
+    const onPlaying = () => { markHealthy(); };
+    const onCanPlay = () => { markHealthy(); };
     const onErrorEvt = () => {
       onError(`Failed to load media: ${id}`);
       // ponytail: seed stall so the recovery timer may retry a stuck/errored
@@ -330,6 +337,7 @@ export function useMediaSync(options: MediaSyncOptions = {}) {
     // from jumping back to the pre-seek position between drag-release and the
     // 'seeked' event firing.
     state.value.currentTime = target;
+    let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
     try {
       const seekPromises: Promise<void>[] = [];
       registry.forEach((el) => {
@@ -347,10 +355,12 @@ export function useMediaSync(options: MediaSyncOptions = {}) {
         );
       });
 
-      // Wait for all to finish seeking (3s timeout fallback)
+      // Wait for all to finish seeking (3s timeout fallback). Capture the timer
+      // so we can clear it when allSettled wins — otherwise frequent seeks (drag)
+      // accumulate pending 3s timers each holding closure refs.
       await Promise.race([
         Promise.allSettled(seekPromises),
-        new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+        new Promise<void>((resolve) => { fallbackTimer = setTimeout(resolve, 3000); }),
       ]);
 
       applySettings();
@@ -358,6 +368,7 @@ export function useMediaSync(options: MediaSyncOptions = {}) {
       const primary = getPrimaryElement();
       if (primary) state.value.currentTime = primary.currentTime;
     } finally {
+      if (fallbackTimer) clearTimeout(fallbackTimer);
       suppressTimeUpdate = false;
     }
   }
@@ -382,6 +393,11 @@ export function useMediaSync(options: MediaSyncOptions = {}) {
     const now = Date.now();
     // ponytail: Object.entries snapshots keys, so deleting during iteration is safe.
     for (const [id, s] of Object.entries(elementStates)) {
+      // ponytail: decay — healthy for 10s since last retry resets the backoff
+      // counter, so a stream that stalled early doesn't stay escalated forever.
+      if (!s.isStalled && s.skipCount > 0 && s.lastRetryTime > 0 && now - s.lastRetryTime > 10000) {
+        s.skipCount = 0;
+      }
       if (!s.isStalled) continue;
       const el = registry.get(id);
       if (!el) continue;

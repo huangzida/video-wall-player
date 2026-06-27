@@ -298,9 +298,15 @@ export function useVideoWall(options: UseVideoWallOptions) {
         videoPool.delete(id);
       }
     }
-    // add new (src assigned on next loadAll/switchChunk — lazy, no eager load).
+    // add new + reload changed srcs. loadSingle short-circuits when the src is
+    // unchanged, so calling it for every surviving id is cheap (no-op for same
+    // src) and handles BOTH "new resource added at runtime" AND "same id, new src".
+    // Fires async — reconcilePool is sync (watch callback), doesn't await.
+    // Limitation: loadSingle loads chunk 0; if activeChunkIndex>0 and a non-zero
+    // chunk's src changed, the active display refreshes on next switchChunk/seek.
     for (const r of normalized.value) {
       if (!videoPool.has(r.id)) ensureVideo(r.id);
+      void loadSingle(r);
     }
     // primary is always resources[0].
     const firstId = normalized.value[0]?.id;
