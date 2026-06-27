@@ -13,6 +13,15 @@
   --vwp-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   --vwp-font-family: ui-sans-serif, system-ui, sans-serif;
   --vwp-tile-hover-border: rgba(255, 255, 255, 0.1);
+  /* Controls-specific tokens (consumed by PlayerControls / SegmentNav) */
+  --vwp-bg-controls: rgba(0, 0, 0, 0.8);
+  --vwp-bg-controls-hover: rgba(0, 0, 0, 0.9);
+  --vwp-hover: rgba(255, 255, 255, 0.1);
+  --vwp-bg-popup: #1a1a1a;
+  --vwp-track: rgba(255, 255, 255, 0.1);
+  --vwp-track-hover: rgba(255, 255, 255, 0.2);
+  --vwp-accent-glow: rgba(59, 130, 246, 0.5);
+  --vwp-bg-soft: rgba(255, 255, 255, 0.05);
 }
 
 .theme-cyberpunk {
@@ -29,6 +38,14 @@
   --vwp-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
   --vwp-font-family: 'Courier New', monospace;
   --vwp-tile-hover-border: #06b6d4;
+  --vwp-bg-controls: rgba(2, 4, 16, 0.85);
+  --vwp-bg-controls-hover: rgba(2, 4, 16, 0.95);
+  --vwp-hover: rgba(6, 182, 212, 0.15);
+  --vwp-bg-popup: rgba(5, 5, 20, 0.95);
+  --vwp-track: rgba(0, 255, 255, 0.15);
+  --vwp-track-hover: rgba(0, 255, 255, 0.3);
+  --vwp-accent-glow: rgba(6, 182, 212, 0.6);
+  --vwp-bg-soft: rgba(6, 182, 212, 0.08);
 }
 
 .theme-industrial {
@@ -45,6 +62,14 @@
   --vwp-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
   --vwp-font-family: 'Arial Black', sans-serif;
   --vwp-tile-hover-border: #eab308;
+  --vwp-bg-controls: #1a1a1a;
+  --vwp-bg-controls-hover: #262626;
+  --vwp-hover: rgba(234, 179, 8, 0.18);
+  --vwp-bg-popup: #262626;
+  --vwp-track: rgba(255, 255, 255, 0.12);
+  --vwp-track-hover: rgba(255, 255, 255, 0.22);
+  --vwp-accent-glow: rgba(234, 179, 8, 0.5);
+  --vwp-bg-soft: rgba(234, 179, 8, 0.1);
 }
 
 .theme-minimalist {
@@ -61,6 +86,15 @@
   --vwp-shadow: none;
   --vwp-font-family: ui-sans-serif, system-ui, sans-serif;
   --vwp-tile-hover-border: transparent;
+  /* Light theme: controls bg is light, text stays dark for readability */
+  --vwp-bg-controls: rgba(255, 255, 255, 0.92);
+  --vwp-bg-controls-hover: rgba(255, 255, 255, 1);
+  --vwp-hover: rgba(0, 0, 0, 0.06);
+  --vwp-bg-popup: #ffffff;
+  --vwp-track: rgba(0, 0, 0, 0.1);
+  --vwp-track-hover: rgba(0, 0, 0, 0.16);
+  --vwp-accent-glow: rgba(17, 24, 39, 0.25);
+  --vwp-bg-soft: rgba(0, 0, 0, 0.03);
 }
 
 .theme-glass {
@@ -77,13 +111,22 @@
   --vwp-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
   --vwp-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --vwp-tile-hover-border: rgba(255, 255, 255, 0.2);
+  /* Glass: translucent controls; .theme-glass .vwp-controls-bg gradient still wins */
+  --vwp-bg-controls: rgba(255, 255, 255, 0.05);
+  --vwp-bg-controls-hover: rgba(255, 255, 255, 0.09);
+  --vwp-hover: rgba(255, 255, 255, 0.1);
+  --vwp-bg-popup: rgba(20, 20, 30, 0.85);
+  --vwp-track: rgba(255, 255, 255, 0.15);
+  --vwp-track-hover: rgba(255, 255, 255, 0.25);
+  --vwp-accent-glow: rgba(255, 255, 255, 0.4);
+  --vwp-bg-soft: rgba(255, 255, 255, 0.05);
 }
 
 /* Common utility classes using vars */
 .vwp-bg-main { background-color: var(--vwp-bg-main); }
 .vwp-bg-sidebar { background-color: var(--vwp-bg-sidebar); }
 .vwp-bg-tile { background-color: var(--vwp-bg-tile); }
-.vwp-controls-bg { background-color: rgba(0, 0, 0, 0.8); }
+.vwp-controls-bg { background-color: var(--vwp-bg-controls); }
 .vwp-border { border-color: var(--vwp-border); }
 .vwp-text-primary { color: var(--vwp-text-primary); }
 .vwp-text-secondary { color: var(--vwp-text-secondary); }

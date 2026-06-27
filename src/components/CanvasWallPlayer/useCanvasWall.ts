@@ -57,34 +57,70 @@ class VideoBridge {
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
-  // Returns a Promise that resolves when the first frame is drawn to the bridge canvas.
+  // Returns a Promise that resolves once the video is ready enough to create a
+  // correctly-sized texture (readyState>=2 + videoWidth known). Robust against the
+  // race where loadedmetadata/loadeddata already fired before we listened (which
+  // would hang the promise and leave that sprite uncreated). Does NOT draw the
+  // first frame — paused walls show a play-button overlay instead (reliable DOM
+  // vs the flaky force-first-frame approach).
   waitForFirstFrame(): Promise<void> {
     return new Promise((resolve) => {
-      // If video already has data, draw immediately
-      if (this.video.readyState >= 2 && this.video.videoWidth > 0) {
-        this.drawFrame();
-        resolve();
-        return;
-      }
-      this.onFirstFrame = resolve;
-      // Listen for loadeddata as fallback
-      const handler = () => {
-        this.video.removeEventListener('loadeddata', handler);
-        if (this.onFirstFrame) {
-          this.drawFrame();
-          this.onFirstFrame();
-          this.onFirstFrame = null;
+      const tryReady = (): boolean => {
+        if (this.video.readyState >= 2 && this.video.videoWidth > 0) {
+          // Ensure canvas matches native video resolution BEFORE the texture is
+          // created — texture dimensions are fixed at creation, and the constructor
+          // may have sized this canvas 16x16 before metadata arrived.
+          const vw = this.video.videoWidth;
+          const vh = this.video.videoHeight;
+          if (this.canvas.width !== vw || this.canvas.height !== vh) {
+            this.canvas.width = vw;
+            this.canvas.height = vh;
+          }
+          return true;
         }
+        return false;
       };
-      this.video.addEventListener('loadeddata', handler);
+      if (tryReady()) { resolve(); return; }
+
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        this.video.removeEventListener('loadedmetadata', onReady);
+        this.video.removeEventListener('loadeddata', onReady);
+        this.video.removeEventListener('canplay', onReady);
+        clearTimeout(fallback);
+        tryReady();
+        resolve();
+      };
+      // loadedmetadata brings videoWidth; loadeddata/canplay bring readyState>=2.
+      // Listen to all three since any may have already fired by now.
+      const onReady = () => { if (tryReady()) finish(); };
+      this.video.addEventListener('loadedmetadata', onReady);
+      this.video.addEventListener('loadeddata', onReady);
+      this.video.addEventListener('canplay', onReady);
+      // ponytail: never hang — resolve so the wall proceeds; the canvas may stay
+      // black but the CanvasWallPlayer's play-button overlay covers it.
+      const fallback = setTimeout(finish, 3000);
     });
   }
 
   // Draw current video frame to the bridge canvas. Called every render tick.
   // Returns true if a frame was actually drawn (video playing + data ready).
+  // `force` overrides the paused-skip — used by waitForFirstFrame so the first
+  // frame is drawn even when autoplay is off (otherwise the sprite stays black
+  // until the user hits play, acting as a built-in poster).
   drawFrame(): boolean {
     if (this.video.paused) return false;
     if (this.video.readyState >= 2) {
+      // Resize bridge canvas to native video resolution if dimensions are now
+      // known but differ (constructor may have sized it 16x16 before metadata).
+      const vw = this.video.videoWidth;
+      const vh = this.video.videoHeight;
+      if (vw > 0 && vh > 0 && (this.canvas.width !== vw || this.canvas.height !== vh)) {
+        this.canvas.width = vw;
+        this.canvas.height = vh;
+      }
       try {
         this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
         return true;

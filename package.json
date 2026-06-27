@@ -24,6 +24,8 @@
     "demo:build": "vite build",
     "demo:dev": "vite",
     "dev": "vite",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "build": "vite build -c vite.config.lib.ts && vite build -c vite.config.lib.auto.ts",
     "bump": "bumpp",
     "changelog": "changelogen --output CHANGELOG.md",
@@ -67,6 +69,7 @@
     "vite": "^8.0.16",
     "vite-plugin-css-injected-by-js": "^4.0.1",
     "vite-plugin-dts": "^5.0.2",
+    "vitest": "^4.1.9",
     "vue": "^3.3.0"
   },
   "engines": {

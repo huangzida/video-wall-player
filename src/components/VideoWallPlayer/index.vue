@@ -1,18 +1,22 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch, onMounted, onUnmounted } from "vue";
+import { computed, nextTick, ref, watch, onMounted } from "vue";
 import type { ComponentPublicInstance } from "vue";
 import { useFullscreen, onKeyStroke } from "@vueuse/core";
 import { AudioLines, Volume2, VolumeX, AlertCircle, RefreshCw, Maximize2 } from "lucide-vue-next";
 import PlayerControls from "../PlayerControls/index.vue";
+import SegmentNav from "../SegmentNav/index.vue";
+import { useVideoWallState } from "../../core/useVideoWallState";
+import { useMediaSync } from "../../core/useMediaSync";
 import { useVideoWallLayout } from "../../hooks/useVideoWallLayout";
 import { formatTime, PLAYBACK_RATE_LEVELS } from "../../utils";
-import type { VideoWallResource, VideoWallTag, VideoWallTheme, VideoWallControlSize, VideoWallLayoutMode } from "./types";
+import type { MediaResource, MediaResourceInput, TimelineTag, ControlSize } from "../../core/types";
+import type { VideoWallTheme, VideoWallLayoutMode } from "./types";
 
 defineOptions({ name: "VideoWallPlayer" });
 
 const props = withDefaults(
   defineProps<{
-    resources: VideoWallResource[];
+    resources: MediaResourceInput[];
     title?: string;
     autoplay?: boolean;
     muted?: boolean;
@@ -22,14 +26,14 @@ const props = withDefaults(
     showControls?: boolean;
     objectFit?: "contain" | "cover" | "fill";
     theme?: VideoWallTheme;
-    controlSize?: VideoWallControlSize;
+    controlSize?: ControlSize;
     layoutMode?: VideoWallLayoutMode;
     draggable?: boolean;
     showTileTitle?: boolean;
     showTileMute?: boolean;
     showTileFullscreen?: boolean;
     showSidebar?: boolean;
-    tags?: VideoWallTag[];
+    tags?: TimelineTag[];
     showPrevNextChunk?: boolean;
     showStepSkip?: boolean;
     showPlaybackRate?: boolean;
@@ -82,191 +86,73 @@ const emit = defineEmits<{
   close: [];
 }>();
 
-const activeChunkIndex = ref(0);
-const isPlaying = ref(false);
-const currentTime = ref(0);
-const playbackRate = ref(1);
-const volume = ref(50);
-const individualMutedStates = ref<Record<string, boolean>>({});
-const bufferingStates = ref<Record<string, boolean>>({});
-const errorStates = ref<Record<string, boolean>>({});
+// --- Wall state/math (shared with CanvasWallPlayer via useVideoWallState) ---
+const wallState = useVideoWallState({
+  resources: computed(() => props.resources as MediaResource[]),
+  loop: props.loop,
+});
+const {
+  primaryResource,
+  segmentCount,
+  activeChunkIndex,
+  computeGlobalState,
+  locateSeek,
+  nextChunkOnEnded,
+  setActiveChunk,
+} = wallState;
 
-interface StallState {
-  isStalled: boolean;
-  pendingSkip: boolean;
-  skipCount: number;
-  startTime: number;
-  lastRetryTime: number;
-}
+// --- Element-level sync (template <video>/<audio> tiles register here) ---
+const sync = useMediaSync({
+  muted: props.muted,
+  volume: 50,
+  playbackRate: 1,
+  skipStepMs: props.skipStepMs,
+  stallThresholdMs: props.stallThresholdMs,
+  maxSkipAttempts: props.maxSkipAttempts,
+  autoSkipOnStall: props.autoSkipOnStall,
+  onError: (msg) => emit("error", msg),
+    onPrimaryEnded: () => {
+      // 'ended' only fires on natural segment-end (user was playing). Continue.
+      const next = nextChunkOnEnded();
+      if (next !== null) void switchChunk(next, 0, true);
+    },
+});
 
-const stallStates = ref<Record<string, StallState>>({});
-
-let stallCheckTimer: ReturnType<typeof setInterval> | null = null;
-
-const wallRef = ref<HTMLElement>();
+// Local refs to the rendered media elements (for retry / direct access).
+// sync ALSO holds them in its registry; this is a thin UI-side handle.
 const mediaRefs = ref<Record<string, HTMLMediaElement>>({});
-const suppressTimeUpdate = ref(false);
 
-const itemCount = computed(() => props.resources.length);
-const canReorderWall = computed(() => itemCount.value > 1);
+// GLOBAL state (segment-summed duration, global currentTime).
+const state = computed(() => computeGlobalState(sync.state.value));
+const playbackRate = computed(() => sync.state.value.playbackRate);
+const volume = computed(() => sync.state.value.volume);
+const isMuted = computed(() => sync.state.value.muted);
 
-const primaryResourceId = ref("");
-const focusedResourceId = ref("");
-const draggingId = ref("");
-const dragOverId = ref("");
+// Per-tile mute UI mirror (paired with sync.toggleMute so they stay aligned).
+const individualMutedStates = ref<Record<string, boolean>>({});
 
-// Local copy of resources to support reordering
-const localResources = ref<VideoWallResource[]>([]);
-
+// Local reorderable copy of normalized resources (for drag & drop).
+const localResources = ref<MediaResource[]>([]);
 watch(
-  () => props.resources,
-  (newResources: VideoWallResource[]) => {
-    localResources.value = [...newResources];
-
-    if (newResources.length > 0) {
-      if (props.muted) {
-        newResources.forEach((item: VideoWallResource) => {
-          individualMutedStates.value[item.id] = true;
-        });
-      }
+  wallState.normalized,
+  (nr) => {
+    localResources.value = [...nr];
+    if (props.muted) {
+      nr.forEach((item) => {
+        individualMutedStates.value[item.id] = true;
+      });
     }
   },
   { immediate: true }
 );
 
-onMounted(() => {
-  if (props.autoplay && localResources.value.length > 0) {
-    setTimeout(() => {
-      void playAllVideos();
-    }, 500);
-  }
+const itemCount = computed(() => localResources.value.length);
+const canReorderWall = computed(() => itemCount.value > 1);
 
-  if (props.autoSkipOnStall) {
-    stallCheckTimer = setInterval(checkAndRecoverStall, 200);
-  }
-});
-
-onUnmounted(() => {
-  if (stallCheckTimer) {
-    clearInterval(stallCheckTimer);
-    stallCheckTimer = null;
-  }
-});
-
-// Media Event Handlers
-function handleWaiting(id: string) {
-  bufferingStates.value[id] = true;
-
-  if (props.autoSkipOnStall && !stallStates.value[id]) {
-    stallStates.value[id] = {
-      isStalled: false,
-      pendingSkip: false,
-      skipCount: 0,
-      startTime: Date.now(),
-      lastRetryTime: 0,
-    };
-  }
-}
-
-function handlePlaying(id: string) {
-  bufferingStates.value[id] = false;
-  errorStates.value[id] = false;
-
-  if (stallStates.value[id]) {
-    delete stallStates.value[id];
-  }
-}
-
-function handleError(id: string) {
-  bufferingStates.value[id] = false;
-  errorStates.value[id] = true;
-  emit("error", `Error loading video: ${id}`);
-
-  if (props.autoSkipOnStall) {
-    if (!stallStates.value[id]) {
-      stallStates.value[id] = {
-        isStalled: true,
-        pendingSkip: false,
-        skipCount: 0,
-        startTime: Date.now(),
-        lastRetryTime: 0,
-      };
-    } else {
-      stallStates.value[id].isStalled = true;
-    }
-  }
-}
-
-function handleRetry(id: string) {
-  errorStates.value[id] = false;
-  const media = mediaRefs.value[id];
-  if (media) {
-    media.load();
-    if (isPlaying.value) {
-      media.play().catch(() => {});
-    }
-  }
-}
-
-function checkAndRecoverStall() {
-  const now = Date.now();
-
-  Object.keys(stallStates.value).forEach(id => {
-    const state = stallStates.value[id];
-    if (!state || !state.isStalled) return;
-
-    const media = mediaRefs.value[id];
-    if (!media) return;
-
-    const stalledDuration = now - state.startTime;
-    const timeSinceLastRetry = now - state.lastRetryTime;
-    const retryInterval = Math.min(1000 + state.skipCount * 200, 2000);
-
-    if (stalledDuration >= props.stallThresholdMs && timeSinceLastRetry >= retryInterval) {
-      if (state.skipCount < props.maxSkipAttempts) {
-        performAutoSkip(id);
-      } else {
-        console.warn(`[AutoSkip] ${id}: Max attempts reached`);
-        delete stallStates.value[id];
-      }
-    }
-  });
-}
-
-function performAutoSkip(id: string) {
-  const media = mediaRefs.value[id];
-  if (!media) return;
-
-  const state = stallStates.value[id];
-  if (!state) return;
-
-  const baseSkipAmount = props.skipStepMs / 1000;
-  const multiplier = Math.pow(2, Math.floor(state.skipCount / 3));
-  const skipAmount = baseSkipAmount * multiplier;
-  const newTime = Math.min(media.duration || Infinity, media.currentTime + skipAmount);
-
-  state.isStalled = false;
-  state.skipCount++;
-  state.lastRetryTime = Date.now();
-
-  media.pause();
-  media.load();
-  media.currentTime = newTime;
-
-  // Resume playback — stall interval will re-detect if still stuck
-  const playPromise = media.play();
-  if (playPromise) playPromise.catch(() => {});
-}
-
-function handleSingleFullscreen(id: string) {
-  const el = document.querySelector(`[data-tile-id="${id}"]`) as HTMLElement | null;
-  if (!el || !el.requestFullscreen) return;
-  if (document.fullscreenElement === el) {
-    document.exitFullscreen().catch(() => {});
-  } else {
-    el.requestFullscreen().catch(() => {});
-  }
-}
+const wallRef = ref<HTMLElement>();
+const focusedResourceId = ref("");
+const draggingId = ref("");
+const dragOverId = ref("");
 
 const effectiveLayoutMode = computed(() => {
   if (focusedResourceId.value) return "1x1";
@@ -291,110 +177,189 @@ const gridStyle = computed(() => ({
   alignContent: "center",
   width: "100%",
   height: "100%",
-  gridAutoFlow: "dense", // Enable dense packing for 1+5/1+7 modes
+  gridAutoFlow: "dense",
 }));
-
-// itemStyle is now dynamic via layout.getItemStyle(index)
-const baseItemStyle = {
-  width: "100%",
-  height: "100%",
-};
 
 const { toggle: toggleFullscreen } = useFullscreen(wallRef);
 
-// Derived from the first resource
-const primaryResource = computed(() => localResources.value[0]);
-const segmentDurations = computed(() => primaryResource.value?.durations || []);
-
-const duration = computed(() =>
-  segmentDurations.value.reduce(
-    (sum: number, item: number | undefined) => sum + Math.max(0, item || 0),
-    0
-  )
-);
-
-const segmentStarts = computed(() => {
-  const starts: number[] = [];
-  let total = 0;
-  segmentDurations.value.forEach((item: number | undefined) => {
-    starts.push(total);
-    total += Math.max(0, item || 0);
-  });
-  return starts;
-});
-
-const primaryId = computed(
-  () => primaryResourceId.value || localResources.value[0]?.id || ""
-);
-
-const isMuted = computed(() => {
-  const allIds = localResources.value.map((item: VideoWallResource) => item.id);
-  if (allIds.length === 0) return false;
-  return allIds.every((id: string) => individualMutedStates.value[id]);
-});
-
+// Segment list for the sidebar (derived from normalized primary).
 const segmentList = computed(() => {
-  if (!primaryResource.value) return [];
-
-  const total = primaryResource.value.chunkUrls.length;
-
-  return Array.from({ length: total }, (_, index) => {
+  const primary = primaryResource.value;
+  if (!primary) return [];
+  return primary.chunkUrls.map((url, index) => {
     const chunkNo = index + 1;
-    const url = primaryResource.value!.chunkUrls[index] || "";
-    // Infer suffix from URL
     const match = url.match(/\.([0-9a-z]+)(?:[?#]|$)/i);
     const suffix = match ? `.${match[1]}` : "";
-
     return {
       index,
       name: `${chunkNo}${suffix}`,
-      duration: Math.max(0, Number(segmentDurations.value[index]) || 0),
+      duration: Math.max(0, primary.durations[index] || 0),
     };
   });
 });
 
 const isAudioChunk = computed(() => {
-  if (!primaryResource.value) return false;
-  const url = primaryResource.value.chunkUrls[activeChunkIndex.value] || "";
+  const primary = primaryResource.value;
+  if (!primary) return false;
+  const url = primary.chunkUrls[activeChunkIndex.value] || "";
   return url.toLowerCase().includes(".wav");
 });
 
+// --- Media element ref binding: register with sync + keep local handle ---
+// ponytail: idempotent on same-el — `:ref="setMediaVNodeRef(item.id)"` recreates
+// the callback every render (Vue function-ref footgun), so we MUST no-op when
+// the bound element hasn't actually changed. Without this guard, every render
+// would unregister (which pauses the element!) then re-register.
 function setMediaRef(id: string, el: HTMLMediaElement | null) {
+  if (mediaRefs.value[id] === el) return; // same element, no-op (render churn guard)
   if (!el) {
     delete mediaRefs.value[id];
+    sync.unregister(id);
     return;
   }
   mediaRefs.value[id] = el;
+  sync.register(id, el);
 }
 
 function setMediaVNodeRef(id: string) {
   return (el: Element | ComponentPublicInstance | null) => {
     if (el && el instanceof HTMLMediaElement) {
       setMediaRef(id, el);
-      return;
+    } else {
+      setMediaRef(id, null);
     }
-    setMediaRef(id, null);
   };
 }
 
-watch(
-  localResources,
-  (next: VideoWallResource[]) => {
-    if (next.length === 0) {
-      primaryResourceId.value = "";
-      return;
-    }
-    const hasPrimary = next.some(
-      (item: VideoWallResource) => item.id === primaryResourceId.value
-    );
-    if (!hasPrimary) {
-      primaryResourceId.value = next[0]?.id || "";
-    }
-  },
-  { deep: true }
-);
+// --- Declarative chunk switch (template re-binds :src via activeChunkIndex) ---
+async function switchChunk(
+  chunkIndex: number,
+  localTime = 0,
+  autoPlay = false
+): Promise<void> {
+  if (localResources.value.length === 0) return;
+  const primary = primaryResource.value;
+  if (!primary) return;
 
-// Drag and Drop Logic
+  // ponytail: pause before chunk swap to prevent async drift; template then
+  // reactively re-binds :src on all tiles when activeChunkIndex changes.
+  sync.pause();
+  setActiveChunk(chunkIndex);
+  await nextTick(); // wait for DOM to apply the new :src bindings
+
+  const segDur = primary.durations[activeChunkIndex.value] || 0;
+  const safeTime = Math.max(0, Math.min(localTime, Math.max(0, segDur - 0.05)));
+  const targetTime = Number.isFinite(safeTime) ? safeTime : 0;
+
+  // Delegate seek-coordination (pause-all -> seek each -> wait 'seeked' -> 3s timeout)
+  // to useMediaSync. The elements' src just changed; setting currentTime queues a
+  // seek after the new chunk loads, and 'seeked' fires when it completes.
+  await sync.seekAllLocal(targetTime);
+
+  if (autoPlay) {
+    await sync.play();
+  }
+}
+
+// --- Global seek ---
+async function seek(globalTime: number): Promise<void> {
+  if (!primaryResource.value) return;
+  const { chunkIndex, localTime } = locateSeek(globalTime);
+  await switchChunk(chunkIndex, localTime, state.value.isPlaying);
+}
+
+// --- PlayerControls handlers ---
+const handlePlayPause = () =>
+  state.value.isPlaying ? sync.pause() : void sync.play();
+
+const handleRateChange = (rate: number) => sync.setRate(rate);
+
+const handleSpeedDown = () => {
+  const idx = PLAYBACK_RATE_LEVELS.indexOf(playbackRate.value);
+  if (idx < PLAYBACK_RATE_LEVELS.length - 1)
+    handleRateChange(PLAYBACK_RATE_LEVELS[idx + 1]!);
+};
+
+const handleSpeedUp = () => {
+  const idx = PLAYBACK_RATE_LEVELS.indexOf(playbackRate.value);
+  if (idx > 0) handleRateChange(PLAYBACK_RATE_LEVELS[idx - 1]!);
+};
+
+const handleSeek = (seconds: number) => {
+  void seek(seconds);
+};
+
+const handleVolumeChange = (vol: number) => {
+  sync.setVolumeAll(vol);
+  sync.setMutedAll(false);
+  // clear per-tile mute UI mirror
+  Object.keys(individualMutedStates.value).forEach((id) => {
+    individualMutedStates.value[id] = false;
+  });
+};
+
+const handleVolumeToggle = () => {
+  const next = !isMuted.value;
+  sync.setMutedAll(next);
+  Object.keys(individualMutedStates.value).forEach((id) => {
+    individualMutedStates.value[id] = next;
+  });
+};
+
+const toggleIndividualMute = (id: string) => {
+  individualMutedStates.value[id] = !individualMutedStates.value[id];
+  sync.toggleMute(id);
+};
+
+const handlePrevChunk = () => {
+  if (activeChunkIndex.value > 0) {
+    void switchChunk(activeChunkIndex.value - 1, 0, state.value.isPlaying);
+  }
+};
+
+const handleNextChunk = () => {
+  if (activeChunkIndex.value < segmentCount.value - 1) {
+    void switchChunk(activeChunkIndex.value + 1, 0, state.value.isPlaying);
+  }
+};
+
+const handleStepBack = (seconds: number) => {
+  void seek(Math.max(0, state.value.currentTime - seconds));
+};
+
+const handleStepForward = (seconds: number) => {
+  void seek(Math.min(state.value.duration, state.value.currentTime + seconds));
+};
+
+const handleSegmentClick = (index: number) => {
+  // ponytail: respect current play state — don't auto-play when paused.
+  void switchChunk(index, 0, state.value.isPlaying);
+};
+
+// --- Retry (error overlay button) ---
+function handleRetry(id: string) {
+  const media = mediaRefs.value[id];
+  if (media) {
+    media.load();
+    if (state.value.isPlaying) media.play().catch(() => {});
+  }
+}
+
+function handleSingleFullscreen(id: string) {
+  const el = document.querySelector(`[data-tile-id="${id}"]`) as HTMLElement | null;
+  if (!el || !el.requestFullscreen) return;
+  if (document.fullscreenElement === el) {
+    document.exitFullscreen().catch(() => {});
+  } else {
+    el.requestFullscreen().catch(() => {});
+  }
+}
+
+const handleTileDoubleClick = (id: string) => {
+  focusedResourceId.value = focusedResourceId.value === id ? "" : id;
+};
+
+// --- Drag and Drop ---
 function handleTileDragStart(event: DragEvent, id: string) {
   if (!canReorderWall.value) {
     event.preventDefault();
@@ -409,41 +374,21 @@ function handleTileDragStart(event: DragEvent, id: string) {
 }
 
 function handleTileDragOver(event: DragEvent, targetId: string) {
-  if (
-    !canReorderWall.value ||
-    !draggingId.value ||
-    draggingId.value === targetId
-  ) {
-    return;
-  }
+  if (!canReorderWall.value || !draggingId.value || draggingId.value === targetId) return;
   event.preventDefault();
-  if (event.dataTransfer) {
-    event.dataTransfer.dropEffect = "move";
-  }
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
   dragOverId.value = targetId;
 }
 
 function handleTileDrop(event: DragEvent, targetId: string) {
-  if (
-    !canReorderWall.value ||
-    !draggingId.value ||
-    draggingId.value === targetId
-  ) {
-    return;
-  }
+  if (!canReorderWall.value || !draggingId.value || draggingId.value === targetId) return;
   event.preventDefault();
-  const sourceIndex = localResources.value.findIndex(
-    (item) => item.id === draggingId.value
-  );
-  const targetIndex = localResources.value.findIndex(
-    (item) => item.id === targetId
-  );
-
+  const sourceIndex = localResources.value.findIndex((item) => item.id === draggingId.value);
+  const targetIndex = localResources.value.findIndex((item) => item.id === targetId);
   if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) {
     dragOverId.value = "";
     return;
   }
-
   const next = [...localResources.value];
   const [moved] = next.splice(sourceIndex, 1);
   if (!moved) return;
@@ -457,236 +402,17 @@ function handleTileDragEnd() {
   dragOverId.value = "";
 }
 
-// Playback Logic
-function applyVideoSettings() {
-  localResources.value.forEach((item: VideoWallResource) => {
-    const media = mediaRefs.value[item.id];
-    if (!media) return;
-    media.playbackRate = playbackRate.value;
-    media.volume = Math.max(0, Math.min(1, volume.value / 100));
-    media.muted = !!individualMutedStates.value[item.id];
-  });
-}
+// primary follows the display order's first tile (original behavior preserved)
+watch(
+  localResources,
+  (next) => {
+    const firstId = next[0]?.id;
+    if (firstId && sync.primaryId.value !== firstId) sync.setPrimary(firstId);
+  },
+  { deep: true }
+);
 
-function syncIsPlayingFromPrimary() {
-  const id = primaryId.value;
-  if (!id) {
-    isPlaying.value = false;
-    return;
-  }
-  const media = mediaRefs.value[id];
-  if (!media) {
-    isPlaying.value = false;
-    return;
-  }
-  isPlaying.value = !media.paused && !media.ended;
-}
-
-async function playAllVideos() {
-  const tasks = localResources.value.map(async (item: VideoWallResource) => {
-    const media = mediaRefs.value[item.id];
-    if (!media) return;
-    try {
-      await media.play();
-    } catch {
-      // ignore
-    }
-  });
-  await Promise.allSettled(tasks);
-  syncIsPlayingFromPrimary();
-}
-
-function pauseAllVideos() {
-  localResources.value.forEach((item: VideoWallResource) => {
-    const media = mediaRefs.value[item.id];
-    if (!media) return;
-    media.pause();
-  });
-  syncIsPlayingFromPrimary();
-}
-
-function syncCurrentTimeFromPrimary() {
-  if (suppressTimeUpdate.value) return;
-  const id = primaryId.value;
-  if (!id) return;
-  const media = mediaRefs.value[id];
-  if (!media) return;
-
-  const segmentStart = segmentStarts.value[activeChunkIndex.value] || 0;
-  currentTime.value = Math.min(
-    duration.value,
-    segmentStart + media.currentTime
-  );
-  syncIsPlayingFromPrimary();
-}
-
-async function switchChunk(
-  chunkIndex: number,
-  localTime = 0,
-  autoPlay = false
-) {
-  if (localResources.value.length === 0) return;
-
-  const maxIndex = Math.max(
-    0,
-    (localResources.value[0]?.chunkUrls.length || 1) - 1
-  );
-  const safeChunkIndex = Math.max(0, Math.min(chunkIndex, maxIndex));
-
-  // ponytail: Pause all before seeking to prevent async drift.
-  // Each video's seek completes at different times; if some are still playing
-  // while others seek, they drift out of sync.
-  pauseAllVideos();
-
-  suppressTimeUpdate.value = true;
-  try {
-    activeChunkIndex.value = safeChunkIndex;
-    await nextTick();
-
-    const chunkDuration =
-      segmentDurations.value[safeChunkIndex] || 0;
-    const safeLocalTime = Math.max(
-      0,
-      Math.min(localTime, Math.max(0, chunkDuration - 0.05))
-    );
-    const targetTime = Number.isFinite(safeLocalTime) ? safeLocalTime : 0;
-
-    // ponytail: Set currentTime for all videos and wait for all 'seeked' events.
-    // This ensures all videos reach the same position before playback resumes.
-    const seekPromises: Promise<void>[] = [];
-    localResources.value.forEach((item) => {
-      const media = mediaRefs.value[item.id];
-      if (!media) return;
-      seekPromises.push(new Promise<void>((resolve) => {
-        const onSeeked = () => {
-          media.removeEventListener('seeked', onSeeked);
-          resolve();
-        };
-        media.addEventListener('seeked', onSeeked);
-        media.currentTime = targetTime;
-      }));
-    });
-
-    // Wait for all videos to finish seeking (with 3s timeout fallback)
-    await Promise.race([
-      Promise.allSettled(seekPromises),
-      new Promise<void>((resolve) => setTimeout(resolve, 3000)),
-    ]);
-
-    applyVideoSettings();
-
-    const segmentStart = segmentStarts.value[safeChunkIndex] || 0;
-    currentTime.value = Math.min(duration.value, segmentStart + localTime);
-  } finally {
-    suppressTimeUpdate.value = false;
-  }
-
-  if (autoPlay) {
-    void playAllVideos();
-  }
-}
-
-function locateByGlobalTime(target: number) {
-  const safeTarget = Math.max(0, Math.min(duration.value, target));
-  if (segmentDurations.value.length === 0) {
-    return { chunkIndex: 0, localTime: 0 };
-  }
-
-  for (let index = 0; index < segmentDurations.value.length; index += 1) {
-    const start = segmentStarts.value[index] || 0;
-    const end = start + (segmentDurations.value[index] || 0);
-
-    if (safeTarget < end || index === segmentDurations.value.length - 1) {
-      return { chunkIndex: index, localTime: Math.max(0, safeTarget - start) };
-    }
-  }
-  return { chunkIndex: segmentDurations.value.length - 1, localTime: 0 };
-}
-
-async function handlePrimaryEnded() {
-  const totalChunks = segmentList.value.length;
-  if (totalChunks <= 0) return;
-
-  if (activeChunkIndex.value >= totalChunks - 1) {
-    if (props.loop) {
-      await switchChunk(0, 0, true);
-      return;
-    }
-    isPlaying.value = false;
-    return;
-  }
-  await switchChunk(activeChunkIndex.value + 1, 0, true);
-}
-
-// Handlers for PlayerControls
-const handlePlayPause = () =>
-  isPlaying.value ? pauseAllVideos() : void playAllVideos();
-const handleRateChange = (value: number) => {
-  playbackRate.value = value;
-  applyVideoSettings();
-};
-const handleSpeedDown = () => {
-  const idx = PLAYBACK_RATE_LEVELS.indexOf(playbackRate.value);
-  if (idx < PLAYBACK_RATE_LEVELS.length - 1)
-    handleRateChange(PLAYBACK_RATE_LEVELS[idx + 1]!);
-};
-const handleSpeedUp = () => {
-  const idx = PLAYBACK_RATE_LEVELS.indexOf(playbackRate.value);
-  if (idx > 0) handleRateChange(PLAYBACK_RATE_LEVELS[idx - 1]!);
-};
-const handleSeek = async (value: number) => {
-  const { chunkIndex, localTime } = locateByGlobalTime(value);
-  const primaryMedia = mediaRefs.value[primaryId.value];
-  const shouldPlay = primaryMedia ? !primaryMedia.paused : isPlaying.value;
-  await switchChunk(chunkIndex, localTime, shouldPlay);
-};
-const handleVolumeToggle = () => {
-  const nextMuted = !isMuted.value;
-  localResources.value.forEach((item) => {
-    individualMutedStates.value[item.id] = nextMuted;
-  });
-  applyVideoSettings();
-};
-const handleVolumeChange = (value: number) => {
-  volume.value = value;
-  localResources.value.forEach((item) => {
-    individualMutedStates.value[item.id] = false;
-  });
-  applyVideoSettings();
-};
-const toggleIndividualMute = (id: string) => {
-  individualMutedStates.value[id] = !individualMutedStates.value[id];
-  applyVideoSettings();
-};
-const handleStepBack = (seconds: number) => {
-  void handleSeek(Math.max(0, currentTime.value - seconds));
-};
-const handleStepForward = (seconds: number) => {
-  void handleSeek(Math.min(duration.value, currentTime.value + seconds));
-};
-const handlePrevChunk = () => {
-  if (activeChunkIndex.value > 0) {
-    void switchChunk(activeChunkIndex.value - 1, 0, isPlaying.value);
-  }
-};
-const handleNextChunk = () => {
-  if (activeChunkIndex.value < segmentList.value.length - 1) {
-    void switchChunk(activeChunkIndex.value + 1, 0, isPlaying.value);
-  }
-};
-const handleSegmentClick = (index: number) => {
-  void switchChunk(index, 0, true);
-};
-
-const handleTileDoubleClick = (id: string) => {
-  if (focusedResourceId.value === id) {
-    focusedResourceId.value = "";
-  } else {
-    focusedResourceId.value = id;
-  }
-};
-
-// Keyboard Shortcuts
+// --- Keyboard shortcuts ---
 onKeyStroke([" ", "k", "K"], (e) => {
   if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) return;
   e.preventDefault();
@@ -705,12 +431,10 @@ onKeyStroke(["m", "M"], (e) => {
   handleVolumeToggle();
 });
 
-onKeyStroke("Escape", (e) => {
+onKeyStroke("Escape", () => {
   if (focusedResourceId.value) {
-    e.preventDefault();
     focusedResourceId.value = "";
   }
-  // Let default Escape behavior handle fullscreen exit if not focused
 });
 
 onKeyStroke("ArrowLeft", (e) => {
@@ -737,10 +461,18 @@ onKeyStroke("ArrowDown", (e) => {
   handleVolumeChange(Math.max(0, volume.value - 10));
 });
 
+onMounted(() => {
+  if (props.autoplay && localResources.value.length > 0) {
+    setTimeout(() => {
+      void sync.play();
+    }, 500);
+  }
+});
+
 defineExpose({
-  play: playAllVideos,
-  pause: pauseAllVideos,
-  seek: handleSeek,
+  play: sync.play,
+  pause: sync.pause,
+  seek,
 });
 </script>
 
@@ -764,7 +496,7 @@ defineExpose({
         >
         <span
           class="text-xs font-mono vwp-accent-bg-soft px-2 py-0.5 rounded-full vwp-accent"
-          >{{ formatTime(duration) }}</span
+          >{{ formatTime(state.duration) }}</span
         >
       </div>
       <div class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
@@ -840,26 +572,12 @@ defineExpose({
             @dragend="handleTileDragEnd"
             @dblclick="handleTileDoubleClick(item.id)"
           >
-            <!-- Media Element -->
+            <!-- Media Element (events wired centrally by useMediaSync via register) -->
             <audio
               v-if="isAudioChunk"
               :ref="setMediaVNodeRef(item.id)"
               :src="item.chunkUrls[activeChunkIndex] || ''"
               preload="metadata"
-              @timeupdate="
-                item.id === primaryId ? syncCurrentTimeFromPrimary() : undefined
-              "
-              @play="
-                item.id === primaryId ? syncIsPlayingFromPrimary() : undefined
-              "
-              @playing="handlePlaying(item.id)"
-              @waiting="handleWaiting(item.id)"
-              @canplay="handlePlaying(item.id)"
-              @error="handleError(item.id)"
-              @pause="
-                item.id === primaryId ? syncIsPlayingFromPrimary() : undefined
-              "
-              @ended="item.id === primaryId ? handlePrimaryEnded() : undefined"
             ></audio>
             <video
               v-else
@@ -870,20 +588,6 @@ defineExpose({
               :poster="item.poster"
               playsinline
               preload="metadata"
-              @timeupdate="
-                item.id === primaryId ? syncCurrentTimeFromPrimary() : undefined
-              "
-              @play="
-                item.id === primaryId ? syncIsPlayingFromPrimary() : undefined
-              "
-              @playing="handlePlaying(item.id)"
-              @waiting="handleWaiting(item.id)"
-              @canplay="handlePlaying(item.id)"
-              @error="handleError(item.id)"
-              @pause="
-                item.id === primaryId ? syncIsPlayingFromPrimary() : undefined
-              "
-              @ended="item.id === primaryId ? handlePrimaryEnded() : undefined"
             ></video>
 
             <!-- Audio Placeholder -->
@@ -918,7 +622,7 @@ defineExpose({
                 <div
                   class="w-1.5 h-1.5 rounded-full"
                   :class="
-                    isPlaying && !bufferingStates[item.id] && !errorStates[item.id] ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
+                    state.isPlaying && !sync.elementStates[item.id]?.isBuffering && !sync.elementStates[item.id]?.isError ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
                   "
                 ></div>
                 <span
@@ -941,13 +645,13 @@ defineExpose({
 
             <!-- AutoSkip Loading Overlay -->
             <div
-              v-if="stallStates[item.id]?.isStalled && stallStates[item.id]?.skipCount > 0"
+              v-if="sync.elementStates[item.id]?.isStalled && sync.elementStates[item.id]!.skipCount > 0"
               class="absolute inset-0 bg-black/80 flex items-center justify-center z-40 backdrop-blur-sm"
             >
               <div class="flex flex-col items-center gap-3">
                 <div class="w-10 h-10 border-3 border-white/20 border-t-blue-500 rounded-full animate-spin"></div>
                 <span class="text-xs text-gray-300 font-medium">
-                  Recovering... ({{ stallStates[item.id].skipCount }}/{{ maxSkipAttempts }})
+                  Recovering... ({{ sync.elementStates[item.id]!.skipCount }}/{{ maxSkipAttempts }})
                 </span>
               </div>
             </div>
@@ -973,7 +677,7 @@ defineExpose({
 
             <!-- Loading/Buffering State -->
             <div
-              v-if="!item.chunkUrls[activeChunkIndex] || bufferingStates[item.id]"
+              v-if="!item.chunkUrls[activeChunkIndex] || sync.elementStates[item.id]?.isBuffering"
               class="absolute inset-0 flex items-center justify-center vwp-bg-main bg-black/20 backdrop-blur-[1px] z-20 pointer-events-none"
             >
               <div
@@ -983,7 +687,7 @@ defineExpose({
 
             <!-- Error State -->
             <div
-              v-if="errorStates[item.id]"
+              v-if="sync.elementStates[item.id]?.isError"
               class="absolute inset-0 flex flex-col items-center justify-center vwp-bg-main bg-black/80 z-30 gap-3"
             >
               <AlertCircle class="w-8 h-8 text-red-500" />
@@ -1006,16 +710,16 @@ defineExpose({
         class="relative z-50 pointer-events-auto"
       >
         <PlayerControls
-          :is-playing="isPlaying"
-          :current-time="currentTime"
-          :duration="duration"
+          :is-playing="state.isPlaying"
+          :current-time="state.currentTime"
+          :duration="state.duration"
           :playback-rates="PLAYBACK_RATE_LEVELS"
           :playback-rate="playbackRate"
           :volume="volume"
-          :is-muted="isMuted"
+          :muted="isMuted"
           :show-stop="false"
-          :tags="tags"
           :show-prev-next-chunk="showPrevNextChunk"
+          :tags="tags"
           :show-step-skip="showStepSkip"
           :show-playback-rate="showPlaybackRate"
           :show-speed-down="showSpeedControl"
@@ -1032,9 +736,24 @@ defineExpose({
           @fullscreen="toggleFullscreen"
           @step-back="handleStepBack"
           @step-forward="handleStepForward"
-          @prev-chunk="handlePrevChunk"
-          @next-chunk="handleNextChunk"
-        />
+        >
+          <template v-if="showPrevNextChunk" #leftAffix>
+            <SegmentNav
+              direction="prev"
+              :disabled="activeChunkIndex <= 0"
+              :control-size="controlSize"
+              @activate="handlePrevChunk"
+            />
+          </template>
+          <template v-if="showPrevNextChunk" #rightAffix>
+            <SegmentNav
+              direction="next"
+              :disabled="activeChunkIndex >= segmentCount - 1"
+              :control-size="controlSize"
+              @activate="handleNextChunk"
+            />
+          </template>
+        </PlayerControls>
       </div>
     </div>
   </div>

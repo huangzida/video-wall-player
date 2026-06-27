@@ -1,7 +1,8 @@
-import type { VideoWallResource, VideoWallLayoutMode, VideoWallControlSize } from '../VideoWallPlayer/types';
+import type { MediaResourceInput, ControlSize } from '../../core/types';
+import type { VideoWallLayoutMode } from '../VideoWallPlayer/types';
 
 export interface CanvasWallPlayerProps {
-  resources: VideoWallResource[];
+  resources: MediaResourceInput[];
   title?: string;
   targetFps?: number;
   batchSize?: number;
@@ -17,7 +18,7 @@ export interface CanvasWallPlayerProps {
   stallThresholdMs?: number;
   maxSkipAttempts?: number;
   showControls?: boolean;
-  controlSize?: VideoWallControlSize;
+  controlSize?: ControlSize;
   /** Use direct Texture.from(video) instead of 2D canvas bridge.
    *  Lower GPU/CPU overhead but may trigger Chrome glCopySubTextureCHROMIUM
    *  errors on some setups. Default: false (use bridge). */

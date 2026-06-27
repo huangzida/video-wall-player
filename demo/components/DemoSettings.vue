@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useStorage } from '@vueuse/core';
-import type {
-  VideoWallControlSize,
-  VideoWallLayoutMode,
-  VideoWallTheme,
-} from '../../src/components/VideoWallPlayer/types';
+import type { VideoWallLayoutMode, VideoWallTheme } from '../../src/components/VideoWallPlayer/types';
+import type { ControlSize as VideoWallControlSize } from '../../src';
 
 type Lang = 'zh-CN' | 'en';
 

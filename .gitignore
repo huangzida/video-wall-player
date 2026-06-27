@@ -6,3 +6,6 @@ dist-ssr
 .npmrc
 .DS_Store
 .pnpm-store
+
+# ponytail: local code intelligence index, regenerable via `codegraph index`
+.codegraph

@@ -2,7 +2,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useStorage } from '@vueuse/core';
 import { CanvasWallPlayer } from '../src/index';
-import type { VideoWallLayoutMode, VideoWallControlSize } from '../src/components/VideoWallPlayer/types';
+import type { VideoWallLayoutMode } from '../src/components/VideoWallPlayer/types';
+import type { ControlSize as VideoWallControlSize } from '../src';
 
 // ponytail: use local test.mp4 for reliable testing without network dependency.
 // Multiple copies (test.mp4, test2.mp4, ...) reduce browser cache lock contention

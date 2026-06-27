@@ -4,12 +4,22 @@ import { useStorage } from '@vueuse/core';
 import { VideoWallPlayer } from '../src/index';
 import CanvasWallDemo from './CanvasWallDemo.vue';
 import DemoSettings from './components/DemoSettings.vue';
-import type { VideoWallTag, VideoWallTheme, VideoWallControlSize, VideoWallLayoutMode } from '../src/components/VideoWallPlayer/types';
+import type { VideoWallTheme, VideoWallLayoutMode } from '../src/components/VideoWallPlayer/types';
+import type { TimelineTag as VideoWallTag, ControlSize as VideoWallControlSize } from '../src';
 
 const useCanvasMode = useStorage('demo-use-canvas-mode', false);
 
 // const testUrl = '//sf1-cdn-tos.huoshanstatic.com/obj/media-fe/xgplayer_doc_video/mp4/xgplayer-demo-360p.mp4';
 // const testDuration = 90;
+// ponytail: rotate among 20 local test files — each stream gets its own video,
+// eliminating browser cache lock contention when many streams load at once.
+// Two chunks per stream use different files so segment switching is visible.
+const testUrls = [
+  './test.mp4', './test2.mp4', './test3.mp4', './test4.mp4', './test5.mp4',
+  './test6.mp4', './test7.mp4', './test8.mp4', './test9.mp4', './test10.mp4',
+  './test11.mp4', './test12.mp4', './test13.mp4', './test14.mp4', './test15.mp4',
+  './test16.mp4', './test17.mp4', './test18.mp4', './test19.mp4', './test20.mp4',
+];
 const testUrl = './test.mp4';
 const testDuration = 90;
 // const testUrl = 'http://localhost:3000/2.mp4';
@@ -20,9 +30,8 @@ const resources = computed(() => {
   return Array.from({ length: videoCount.value }, (_, i) => ({
     id: `res-${i + 1}`,
     name: `Stream ${i + 1}`,
-    chunkUrls: [testUrl, testUrl],
+    chunkUrls: [testUrls[i % testUrls.length], testUrls[(i + 1) % testUrls.length]],
     durations: [testDuration, testDuration],
-    poster: testPoster,
   }));
 });
 
