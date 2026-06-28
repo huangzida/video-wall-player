@@ -204,6 +204,63 @@ onKeyStroke('Escape', () => {
   }
 });
 
+onKeyStroke('[', (e) => {
+  if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  handlePrevChunk();
+});
+
+onKeyStroke(']', (e) => {
+  if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  handleNextChunk();
+});
+
+onKeyStroke(['1', '2', '3', '4', '5', '6', '7', '8', '9'], (e) => {
+  if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  const idx = parseInt(e.key) - 1;
+  const item = props.resources[idx];
+  // ponytail: MediaResourceInput includes string shorthand (no id); skip those.
+  // Object shapes both carry `.id` from MediaResourceObjectBase.
+  if (item && typeof item !== 'string') {
+    interaction.focusedId.value = item.id;
+    canvasState.focusOn(item.id);
+  }
+});
+
+onKeyStroke('0', (e) => {
+  if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  interaction.focusedId.value = null;
+  canvasState.focusOn(null);
+});
+
+onKeyStroke('ArrowLeft', (e) => {
+  if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  // ponytail: Canvas has no stepSeconds prop — hardcode DOM's default (5s)
+  handleStepBack(5);
+});
+
+onKeyStroke('ArrowRight', (e) => {
+  if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  handleStepForward(5);
+});
+
+onKeyStroke('ArrowUp', (e) => {
+  if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  handleVolumeChange(Math.min(100, wall.state.value.volume + 10));
+});
+
+onKeyStroke('ArrowDown', (e) => {
+  if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  handleVolumeChange(Math.max(0, wall.state.value.volume - 10));
+});
+
 // --- Lifecycle ---
 onMounted(async () => {
   // Wait for DOM to have real dimensions

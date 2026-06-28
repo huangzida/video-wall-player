@@ -475,6 +475,32 @@ onKeyStroke("ArrowDown", (e) => {
   handleVolumeChange(Math.max(0, volume.value - 10));
 });
 
+onKeyStroke("[", (e) => {
+  if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  handlePrevChunk();
+});
+
+onKeyStroke("]", (e) => {
+  if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  handleNextChunk();
+});
+
+onKeyStroke(["1", "2", "3", "4", "5", "6", "7", "8", "9"], (e) => {
+  if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  const idx = parseInt(e.key) - 1;
+  const item = localResources.value[idx];
+  if (item) focusedResourceId.value = item.id;
+});
+
+onKeyStroke("0", (e) => {
+  if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) return;
+  e.preventDefault();
+  focusedResourceId.value = "";
+});
+
 onMounted(() => {
   if (props.autoplay && localResources.value.length > 0) {
     setTimeout(() => {
