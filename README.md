@@ -25,7 +25,7 @@ npm install video-wall-player
 pnpm add video-wall-player
 ```
 
-Peer deps: `vue` (^3.3), `@vueuse/core`. The player imports its own styles:
+Peer dep: `vue` ^3.3. Other dependencies (`@vueuse/core`, `lucide-vue-next`, `pixi.js`) are bundled. Import styles:
 
 ```ts
 import 'video-wall-player/style.css';
