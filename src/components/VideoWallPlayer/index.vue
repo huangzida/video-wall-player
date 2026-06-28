@@ -260,12 +260,15 @@ async function switchChunk(
 
   const segDur = primary.durations[activeChunkIndex.value] || 0;
   const safeTime = Math.max(0, Math.min(localTime, Math.max(0, segDur - 0.05)));
-  const targetTime = Number.isFinite(safeTime) ? safeTime : 0;
 
-  // Delegate seek-coordination (pause-all -> seek each -> wait 'seeked' -> 3s timeout)
-  // to useMediaSync. The elements' src just changed; setting currentTime queues a
-  // seek after the new chunk loads, and 'seeked' fires when it completes.
-  await sync.seekAllLocal(targetTime);
+  // ponytail: localTime=0 (natural progression) — fresh src starts at 0, so
+  // seekAllLocal(0) is pointless (no 'seeked' → 3s timeout wasted). Use
+  // waitForReady (waits for canplay) instead. Only seek when localTime>0.
+  if (safeTime > 0) {
+    await sync.seekAllLocal(safeTime);
+  } else {
+    await sync.waitForReady();
+  }
 
   if (autoPlay) {
     await sync.play();

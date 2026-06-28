@@ -388,6 +388,35 @@ export function useMediaSync(options: MediaSyncOptions = {}) {
     applySettings();
   }
 
+  // --- wait for elements to be ready after a src swap (before play) ---
+  // ponytail: used by switchChunk when localTime=0 (natural segment progression).
+  // A fresh src starts at position 0 — seekAllLocal(0) is pointless (no 'seeked'
+  // fires → 3s timeout wasted). This waits for canplay instead + applies settings.
+  async function waitForReady(timeoutMs = 5000): Promise<void> {
+    const promises: Promise<void>[] = [];
+    registry.forEach((el) => {
+      if (el.readyState >= 2) return; // already ready
+      promises.push(
+        new Promise<void>((resolve) => {
+          let settled = false;
+          const onReady = () => { if (!settled) { settled = true; done(); } };
+          const onErr = () => { if (!settled) { settled = true; done(); } };
+          const fallback = setTimeout(() => { if (!settled) { settled = true; done(); } }, timeoutMs);
+          function done() {
+            el.removeEventListener('canplay', onReady);
+            el.removeEventListener('error', onErr);
+            clearTimeout(fallback);
+            resolve();
+          }
+          el.addEventListener('canplay', onReady);
+          el.addEventListener('error', onErr);
+        }),
+      );
+    });
+    await Promise.allSettled(promises);
+    applySettings();
+  }
+
   // --- stall recovery ---
   function checkAndRecoverStall(): void {
     const now = Date.now();
@@ -512,6 +541,7 @@ export function useMediaSync(options: MediaSyncOptions = {}) {
     play,
     pause,
     seekAllLocal,
+    waitForReady,
     setRate,
     setMutedAll,
     setVolumeAll,

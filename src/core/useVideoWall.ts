@@ -190,7 +190,14 @@ export function useVideoWall(options: UseVideoWallOptions) {
     // 'seeked' -> 3s timeout -> applySettings) to useMediaSync.seekAllLocal.
     // This drops the inline seekPromises/seeked-wait block that lived in both
     // 0.0.12 engines — that coordination is now useMediaSync's single job.
-    await sync.seekAllLocal(safeTime);
+    // ponytail: localTime=0 (natural progression) — fresh src starts at 0, so
+    // seekAllLocal(0) is pointless (no 'seeked' → 3s timeout wasted). Use
+    // waitForReady (waits for canplay) instead. Only seek when localTime>0.
+    if (safeTime > 0) {
+      await sync.seekAllLocal(safeTime);
+    } else {
+      await sync.waitForReady();
+    }
 
     if (autoPlay) {
       await sync.play();
