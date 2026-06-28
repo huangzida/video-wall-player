@@ -137,7 +137,7 @@ export function useMediaSync(options: MediaSyncOptions = {}) {
     // ponytail: per-id volume overrides aggregate when set; divide by 100 for 0-1.
     const perVol = volumeMap.get(id);
     el.volume = Math.max(0, Math.min(1, (perVol ?? state.value.volume) / 100));
-    el.muted = state.value.muted || mutedMap.get(id) === true;
+    el.muted = mutedMap.get(id) === true;
     el.loop = !!loop;
   }
 
@@ -244,6 +244,8 @@ export function useMediaSync(options: MediaSyncOptions = {}) {
       isBuffering: false,
       isError: false,
     };
+    // ponytail: 新 tile 跟随当前全局静音意图（初始 = options.muted）。
+    if (!mutedMap.has(id)) mutedMap.set(id, state.value.muted);
     applySettingsToEl(id, el);
     if (!primaryId.value) {
       setPrimary(id);
@@ -297,9 +299,8 @@ export function useMediaSync(options: MediaSyncOptions = {}) {
     const next = !mutedMap.get(id);
     mutedMap.set(id, next);
     const el = registry.get(id);
-    // ponytail: recompute for one element only — cheaper than re-applying all,
-    // and only this id's mute state changed.
-    if (el) el.muted = state.value.muted || next;
+    // ponytail: 方案A — el.muted 只看 perTile，无全局 OR 压制。
+    if (el) el.muted = next;
   }
 
   // --- aggregate intents ---
@@ -380,6 +381,8 @@ export function useMediaSync(options: MediaSyncOptions = {}) {
 
   function setMutedAll(muted: boolean): void {
     state.value.muted = muted;
+    // ponytail: 方案A — 控制栏静音 = 批量 perTile（全静音/全取消），不靠 OR。
+    registry.forEach((_, id) => mutedMap.set(id, muted));
     applySettings();
   }
 

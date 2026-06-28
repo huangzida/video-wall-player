@@ -204,6 +204,26 @@ describe('useMediaSync — composition contract', () => {
     sync.destroy();
   });
 
+  it('setMutedAll(true) does not suppress per-element unmute (no global OR)', () => {
+    // ponytail: 方案 A — 单 perTile 真相。全局静音（setMutedAll）后单 tile
+    // 取消静音（toggleMute）必须生效，不被全局 OR 压制（原 bug：图标翻转
+    // 但 el.muted 仍 true，声音图标不一致）。
+    const sync = useMediaSync();
+    const a = new FakeMediaElement();
+    const b = new FakeMediaElement();
+    sync.register('a', asMedia(a));
+    sync.register('b', asMedia(b));
+
+    sync.setMutedAll(true);
+    expect(a.muted).toBe(true);
+    expect(b.muted).toBe(true);
+
+    sync.toggleMute('a'); // 单独取消 a 的静音
+    expect(a.muted).toBe(false); // 必须生效，不被全局压制
+    expect(b.muted).toBe(true); // 其他保持静音
+    sync.destroy();
+  });
+
   it('destroy unwires events (no further primary updates) and pauses elements', () => {
     const sync = useMediaSync();
     const a = new FakeMediaElement();

@@ -126,7 +126,11 @@ const mediaRefs = ref<Record<string, HTMLMediaElement>>({});
 const state = computed(() => computeGlobalState(sync.state.value));
 const playbackRate = computed(() => sync.state.value.playbackRate);
 const volume = computed(() => sync.state.value.volume);
-const isMuted = computed(() => sync.state.value.muted);
+// ponytail: 方案A — 控制栏图标 = 是否全部 tile 静音（任一有声则显示有声）。
+const isMuted = computed(() => {
+  const states = Object.values(individualMutedStates.value);
+  return states.length > 0 && states.every((v) => v === true);
+});
 
 // Per-tile mute UI mirror (paired with sync.toggleMute so they stay aligned).
 const individualMutedStates = ref<Record<string, boolean>>({});
@@ -137,11 +141,11 @@ watch(
   wallState.normalized,
   (nr) => {
     localResources.value = [...nr];
-    if (props.muted) {
-      nr.forEach((item) => {
-        individualMutedStates.value[item.id] = true;
-      });
-    }
+    // ponytail: 方案A — 新 tile 跟随当前全局静音意图（sync.state.muted）。
+    const muted = sync.state.value.muted;
+    nr.forEach((item) => {
+      individualMutedStates.value[item.id] = muted;
+    });
   },
   { immediate: true }
 );
