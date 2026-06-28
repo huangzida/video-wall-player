@@ -68,9 +68,12 @@ const resources = [
 
 // Full shape (segment durations known up-front — enables instant cross-segment seek)
 { id: 'cam-1', name: 'Camera 1', chunkUrls: ['seg-0.mp4', 'seg-1.mp4'], durations: [120, 120], poster: 'poster.png' }
+
+// With custom segment names (sidebar shows these instead of auto-derived "1.mp4")
+{ id: 'cam-1', name: 'Camera 1', chunkUrls: ['seg-0.mp4', 'seg-1.mp4'], durations: [120, 120], segmentNames: ['Morning Patrol', 'Afternoon Patrol'] }
 ```
 
-Empty `chunkUrls` throws (fail-loud). `durations` defaults to `0` (unknown) and is padded/clamped to match `chunkUrls` length.
+Empty `chunkUrls` throws (fail-loud). `durations` defaults to `0` (unknown) and is padded/clamped to match `chunkUrls` length. `segmentNames` (optional) sets custom display names per segment in the sidebar; defaults to URL-derived names (e.g. `1.mp4`).
 
 ## `<VideoWallPlayer>` props
 
@@ -121,11 +124,16 @@ interface TimelineTag { id?: string | number; time: number; name: string; color?
 
 ## Keyboard shortcuts
 
+All shortcuts work in both `<VideoWallPlayer>` and `<CanvasWallPlayer>`.
+
 | Key | Action |
 |---|---|
 | `Space` / `k` | Play / pause |
 | `f` | Fullscreen |
 | `m` | Mute toggle |
+| `[` / `]` | Previous / next segment |
+| `1`-`9` | Spotlight tile N |
+| `0` | Exit spotlight |
 | `←` / `→` | Step back / forward (`stepSeconds`) |
 | `↑` / `↓` | Volume up / down (±10) |
 | `Esc` | Exit focus / fullscreen |
