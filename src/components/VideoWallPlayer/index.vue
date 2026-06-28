@@ -261,13 +261,19 @@ async function switchChunk(
   const segDur = primary.durations[activeChunkIndex.value] || 0;
   const safeTime = Math.max(0, Math.min(localTime, Math.max(0, segDur - 0.05)));
 
-  // ponytail: localTime=0 (natural progression) — fresh src starts at 0, so
-  // seekAllLocal(0) is pointless (no 'seeked' → 3s timeout wasted). Use
-  // waitForReady (waits for canplay) instead. Only seek when localTime>0.
   if (safeTime > 0) {
     await sync.seekAllLocal(safeTime);
   } else {
-    await sync.waitForReady();
+    // ponytail: localTime=0 两况——fresh src（URL 变）currentTime 已归零，
+    // waitForReady 即可；同 URL（如音频墙单文件多片段）模板不会重设 :src，
+    // currentTime 仍是旧位置，必须 seekAllLocal(0) 强制归零。用 primary 元素
+    // 的 currentTime 判断是否需要归零。
+    const primaryEl = primary.id ? mediaRefs.value[primary.id] : null;
+    if (primaryEl && primaryEl.currentTime > 0) {
+      await sync.seekAllLocal(0);
+    } else {
+      await sync.waitForReady();
+    }
   }
 
   if (autoPlay) {

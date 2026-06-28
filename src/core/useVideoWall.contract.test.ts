@@ -292,4 +292,28 @@ describe('useVideoWall — composition contract', () => {
     expect(fakes[0].muted).toBe(true);
     wall.destroy();
   });
+
+  it('switchChunk to a same-URL chunk resets currentTime to 0 (audio-wall: one file, multi-segment)', async () => {
+    // ponytail: 音频墙常单文件切多片段；切换必须从头播放，不能因 src-equality
+    // 短路 + localTime=0 不 seek 而卡在旧位置。
+    const { wall, fakes } = makeWall({
+      resources: [
+        {
+          id: 'p',
+          name: 'P',
+          chunkUrls: ['same.mp3', 'same.mp3'],
+          durations: [10, 10],
+        },
+      ],
+    });
+    await wall.loadAll();
+    // 播放到中段
+    fakes[0].currentTime = 5;
+
+    await wall.switchChunk(1, 0, false);
+
+    expect(wall.activeChunkIndex.value).toBe(1);
+    expect(fakes[0].currentTime).toBe(0); // 必须归零，从片段2开头播放
+    wall.destroy();
+  });
 });

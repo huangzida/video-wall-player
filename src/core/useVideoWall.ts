@@ -176,6 +176,7 @@ export function useVideoWall(options: UseVideoWallOptions) {
     const safeTime = clampDuration(localTime, segDur);
 
     // Swap src for ALL elements to the new chunk.
+    let anySrcChanged = false;
     normalized.value.forEach((r) => {
       const video = videoPool.get(r.id);
       if (!video) return;
@@ -183,20 +184,22 @@ export function useVideoWall(options: UseVideoWallOptions) {
       if (video.src !== url && video.src !== resolveUrl(url)) {
         video.src = url;
         video.load();
+        anySrcChanged = true;
       }
     });
 
     // Delegate seek-coordination (pause-all -> each el.currentTime -> wait all
     // 'seeked' -> 3s timeout -> applySettings) to useMediaSync.seekAllLocal.
-    // This drops the inline seekPromises/seeked-wait block that lived in both
-    // 0.0.12 engines — that coordination is now useMediaSync's single job.
-    // ponytail: localTime=0 (natural progression) — fresh src starts at 0, so
-    // seekAllLocal(0) is pointless (no 'seeked' → 3s timeout wasted). Use
-    // waitForReady (waits for canplay) instead. Only seek when localTime>0.
+    // ponytail: localTime=0 分三况——localTime>0 直接 seek；fresh src（anySrcChanged）
+    // currentTime 已归零，waitForReady 即可；同 URL（!anySrcChanged，如音频墙单文件
+    // 多片段）currentTime 仍是旧位置，必须 seekAllLocal(0) 强制归零，否则片段切换
+    // 卡在旧位置。后者 currentTime>0 会触发 'seeked'，无 3s 超时风险。
     if (safeTime > 0) {
       await sync.seekAllLocal(safeTime);
-    } else {
+    } else if (anySrcChanged) {
       await sync.waitForReady();
+    } else {
+      await sync.seekAllLocal(0);
     }
 
     if (autoPlay) {
