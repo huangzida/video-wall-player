@@ -380,6 +380,7 @@ export function useVideoWall(options: UseVideoWallOptions) {
     activeChunkIndex: activeChunkIndex as Readonly<Ref<number>>,
     segmentCount: segmentCount as Readonly<Ref<number>>,
     primaryId: sync.primaryId,
+    normalized, // ComputedRef<MediaResource[]> — normalized resources for consumers needing { id, chunkUrls }
     // wall intents
     play,
     pause,

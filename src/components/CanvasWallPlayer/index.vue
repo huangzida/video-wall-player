@@ -88,7 +88,7 @@ const wall = useVideoWall({
 
 // --- Canvas wall (renders the pool via PixiJS) ---
 const canvasState = useCanvasWall({
-  resources,
+  resources: wall.normalized,
   videoPool: wall.videoPool,
   targetFps,
   backgroundColor,
