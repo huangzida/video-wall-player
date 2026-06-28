@@ -1,6 +1,27 @@
 # Changelog
 
 
+## v0.1.0...main
+
+[compare changes](https://github.com/huangzida/video-wall-player/compare/v0.1.0...main)
+
+### 🚀 Enhancements
+
+- 音频墙 — isAudioChunk 识别 mp3、demo mp3/wav 源切换、占位图标正圆 ([629a33b](https://github.com/huangzida/video-wall-player/commit/629a33b))
+
+### 🩹 Fixes
+
+- **core:** 同 URL 片段切换从头播放 — 音频墙单文件多片段 ([409e076](https://github.com/huangzida/video-wall-player/commit/409e076))
+- **core:** 控制栏与 tile 静音冲突 — 单 perTile 真相去全局 OR ([7d0c57f](https://github.com/huangzida/video-wall-player/commit/7d0c57f))
+
+### 💅 Refactors
+
+- **demo:** CanvasWall 配置并入 DemoSettings + 分组折叠 ([04edd07](https://github.com/huangzida/video-wall-player/commit/04edd07))
+
+### ❤️ Contributors
+
+- Huangzida <398926656@qq.com>
+
 ## v0.0.12...main
 
 [compare changes](https://github.com/huangzida/video-wall-player/compare/v0.0.12...main)
