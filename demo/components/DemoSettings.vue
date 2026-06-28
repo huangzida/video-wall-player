@@ -3,10 +3,24 @@ import { computed, ref } from 'vue';
 import { useStorage } from '@vueuse/core';
 import type { VideoWallLayoutMode, VideoWallTheme } from '../../src/components/VideoWallPlayer/types';
 import type { ControlSize as VideoWallControlSize } from '../../src';
+import {
+  canvasVideoCount,
+  canvasTargetFps,
+  canvasBatchSize,
+  canvasAutoplay,
+  canvasMuted,
+  canvasLoop,
+  canvasGap,
+  canvasEnableFocus,
+  canvasAutoSkipOnStall,
+  canvasUseTextureMode,
+} from '../canvasSettings';
 
 type Lang = 'zh-CN' | 'en';
 
 const props = defineProps<{
+  useCanvasMode: boolean;
+  mediaType: 'mp4' | 'mp3' | 'wav';
   autoplay: boolean;
   muted: boolean;
   loop: boolean;
@@ -38,6 +52,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  'update:useCanvasMode': [value: boolean];
+  'update:mediaType': [value: 'mp4' | 'mp3' | 'wav'];
   'update:autoplay': [value: boolean];
   'update:muted': [value: boolean];
   'update:loop': [value: boolean];
@@ -76,6 +92,9 @@ const t = computed(() => {
   return {
     settings: zh ? '设置' : 'Settings',
     config: zh ? '配置' : 'Configuration',
+    mode: zh ? '模式' : 'Mode',
+    mediaType: zh ? '媒体类型' : 'Media Type',
+    basic: zh ? '基础' : 'Basic',
     autoplay: zh ? '自动播放' : 'Autoplay',
     muted: zh ? '静音（初始）' : 'Muted (Initial)',
     loop: zh ? '循环播放' : 'Loop',
@@ -113,6 +132,10 @@ const t = computed(() => {
     skipStep: zh ? '跳帧步长' : 'Skip Step (ms)',
     maxAttempts: zh ? '最大尝试次数' : 'Max Attempts',
     stallThreshold: zh ? '卡顿检测阈值' : 'Stall Threshold (ms)',
+    targetFps: zh ? '目标帧率' : 'Target FPS',
+    batchSize: zh ? '批次大小' : 'Batch Size',
+    doubleTapFocus: zh ? '双击聚焦' : 'Double-tap Focus',
+    textureMode: zh ? '纹理模式（无桥接）' : 'Texture Mode (no bridge)',
   };
 });
 
@@ -120,6 +143,14 @@ function toggleLang() {
   lang.value = lang.value === 'zh-CN' ? 'en' : 'zh-CN';
 }
 
+const modelUseCanvasMode = computed({
+  get: () => props.useCanvasMode,
+  set: (v: boolean) => emit('update:useCanvasMode', v),
+});
+const modelMediaType = computed({
+  get: () => props.mediaType,
+  set: (v: 'mp4' | 'mp3' | 'wav') => emit('update:mediaType', v),
+});
 const modelAutoplay = computed({
   get: () => props.autoplay,
   set: (v: boolean) => emit('update:autoplay', v),
@@ -248,6 +279,25 @@ const modelStallThresholdMs = computed({
     </div>
 
     <div>
+      <label class="muted">{{ t.mode }}</label>
+      <select v-model="modelUseCanvasMode">
+        <option :value="false">DOM</option>
+        <option :value="true">Canvas</option>
+      </select>
+    </div>
+
+    <div v-if="!modelUseCanvasMode">
+      <label class="muted">{{ t.mediaType }}</label>
+      <select v-model="modelMediaType">
+        <option value="mp4">MP4 {{ lang === 'zh-CN' ? '视频墙' : 'Wall' }}</option>
+        <option value="mp3">MP3 {{ lang === 'zh-CN' ? '音频墙' : 'Wall' }}</option>
+        <option value="wav">WAV {{ lang === 'zh-CN' ? '音频墙' : 'Wall' }}</option>
+      </select>
+    </div>
+
+    <div v-if="!modelUseCanvasMode">
+      <details open>
+        <summary>{{ t.basic }}</summary>
       <div class="row">
         <label>{{ t.autoplay }}</label>
         <input type="checkbox" v-model="modelAutoplay" />
@@ -323,7 +373,9 @@ const modelStallThresholdMs = computed({
         {{ t.note }}
       </div>
 
-      <h4>{{ t.uiToggles }}</h4>
+      </details>
+      <details>
+        <summary>{{ t.uiToggles }}</summary>
 
       <div class="row">
         <label>{{ t.showSidebar }}</label>
@@ -350,7 +402,9 @@ const modelStallThresholdMs = computed({
         <input type="checkbox" v-model="modelFixedTileMeta" />
       </div>
 
-      <h4>{{ t.controls }}</h4>
+      </details>
+      <details>
+        <summary>{{ t.controls }}</summary>
 
       <div class="row">
         <label>{{ t.prevNext }}</label>
@@ -390,7 +444,9 @@ const modelStallThresholdMs = computed({
         </select>
       </div>
 
-      <h4>{{ lang === 'zh-CN' ? '自动跳帧恢复' : 'Auto Skip Recovery' }}</h4>
+      </details>
+      <details>
+        <summary>{{ lang === 'zh-CN' ? '自动跳帧恢复' : 'Auto Skip Recovery' }}</summary>
 
       <div class="row">
         <label>{{ t.autoSkip }}</label>
@@ -438,7 +494,9 @@ const modelStallThresholdMs = computed({
         />
       </div>
 
-      <h4>{{ t.layout }}</h4>
+      </details>
+      <details>
+        <summary>{{ t.layout }}</summary>
       <div>
         <label class="muted">{{ t.layoutMode }}</label>
         <select v-model="modelLayoutMode">
@@ -474,6 +532,63 @@ const modelStallThresholdMs = computed({
           min="0"
           max="50"
         />
+      </div>
+      </details>
+    </div>
+
+    <!-- Canvas 模式配置 -->
+    <div v-if="useCanvasMode">
+      <div>
+        <div class="row">
+          <label>{{ t.videoCount }}</label>
+          <span class="muted">{{ canvasVideoCount }}</span>
+        </div>
+        <input type="range" v-model.number="canvasVideoCount" min="1" max="30" />
+      </div>
+      <div>
+        <div class="row">
+          <label>{{ t.targetFps }}</label>
+          <span class="muted">{{ canvasTargetFps }}</span>
+        </div>
+        <input type="range" v-model.number="canvasTargetFps" min="1" max="60" />
+      </div>
+      <div>
+        <div class="row">
+          <label>{{ t.batchSize }}</label>
+          <span class="muted">{{ canvasBatchSize }}</span>
+        </div>
+        <input type="range" v-model.number="canvasBatchSize" min="1" max="10" />
+      </div>
+      <div class="row">
+        <label>{{ t.autoplay }}</label>
+        <input type="checkbox" v-model="canvasAutoplay" />
+      </div>
+      <div class="row">
+        <label>{{ t.muted }}</label>
+        <input type="checkbox" v-model="canvasMuted" />
+      </div>
+      <div class="row">
+        <label>{{ t.loop }}</label>
+        <input type="checkbox" v-model="canvasLoop" />
+      </div>
+      <div>
+        <div class="row">
+          <label>{{ t.gap }}</label>
+          <span class="muted">{{ canvasGap }}px</span>
+        </div>
+        <input type="range" v-model.number="canvasGap" min="0" max="32" />
+      </div>
+      <div class="row">
+        <label>{{ t.doubleTapFocus }}</label>
+        <input type="checkbox" v-model="canvasEnableFocus" />
+      </div>
+      <div class="row">
+        <label>{{ t.autoSkip }}</label>
+        <input type="checkbox" v-model="canvasAutoSkipOnStall" />
+      </div>
+      <div class="row">
+        <label>{{ t.textureMode }}</label>
+        <input type="checkbox" v-model="canvasUseTextureMode" />
       </div>
     </div>
   </div>

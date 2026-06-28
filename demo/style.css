@@ -105,6 +105,36 @@ body,
   border-bottom: 1px solid var(--demo-border);
 }
 
+/* 折叠分组标题（原生 details/summary，复用 h4 视觉） */
+.demo-settings details {
+  margin-top: 4px;
+}
+.demo-settings summary {
+  margin: 14px 0 8px 0;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--demo-muted);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--demo-border);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+.demo-settings summary::-webkit-details-marker {
+  display: none;
+}
+.demo-settings summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 10px;
+  transition: transform 0.15s ease;
+}
+.demo-settings details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
 .demo-settings .row {
   display: flex;
   align-items: center;
