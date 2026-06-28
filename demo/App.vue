@@ -8,30 +8,31 @@ import type { VideoWallTheme, VideoWallLayoutMode } from '../src/components/Vide
 import type { TimelineTag as VideoWallTag, ControlSize as VideoWallControlSize } from '../src';
 
 const useCanvasMode = useStorage('demo-use-canvas-mode', false);
-
-// const testUrl = '//sf1-cdn-tos.huoshanstatic.com/obj/media-fe/xgplayer_doc_video/mp4/xgplayer-demo-360p.mp4';
-// const testDuration = 90;
-// ponytail: rotate among 20 local test files — each stream gets its own video,
-// eliminating browser cache lock contention when many streams load at once.
-// Two chunks per stream use different files so segment switching is visible.
-const testUrls = [
-  './test.mp4', './test2.mp4', './test3.mp4', './test4.mp4', './test5.mp4',
-  './test6.mp4', './test7.mp4', './test8.mp4', './test9.mp4', './test10.mp4',
-  './test11.mp4', './test12.mp4', './test13.mp4', './test14.mp4', './test15.mp4',
-  './test16.mp4', './test17.mp4', './test18.mp4', './test19.mp4', './test20.mp4',
-];
-const testUrl = './test.mp4';
-const testDuration = 90;
-// const testUrl = 'http://localhost:3000/2.mp4';
-// const testDuration = 301;
-const testPoster = 'https://media.w3.org/2010/05/sintel/poster.png';
+// ponytail: switch demo source type — mp4 (20 copies, avoids browser cache-lock
+// contention across simultaneous streams) or a single audio file (mp3/wav).
+// Audio decode doesn't hit the same lock, so one shared URL is fine per type.
+const mediaType = useStorage<'mp4' | 'mp3' | 'wav'>('demo-media-type', 'mp4');
+const sourceUrlsByType: Record<string, string[]> = {
+  mp4: [
+    './test.mp4', './test2.mp4', './test3.mp4', './test4.mp4', './test5.mp4',
+    './test6.mp4', './test7.mp4', './test8.mp4', './test9.mp4', './test10.mp4',
+    './test11.mp4', './test12.mp4', './test13.mp4', './test14.mp4', './test15.mp4',
+    './test16.mp4', './test17.mp4', './test18.mp4', './test19.mp4', './test20.mp4',
+  ],
+  mp3: ['./test.mp3', './test2.mp3', './test3.mp3', './test4.mp3', './test5.mp3'],
+  wav: ['./test.wav', './test2.wav', './test3.wav', './test4.wav', './test5.wav'],
+};
 
 const resources = computed(() => {
+  const urls = sourceUrlsByType[mediaType.value];
+  // ponytail: known durations — mp4=90s, mp3/wav=97s (实测).
+  const durByType: Record<string, number> = { mp4: 90, mp3: 97, wav: 97 };
+  const dur = durByType[mediaType.value];
   return Array.from({ length: videoCount.value }, (_, i) => ({
     id: `res-${i + 1}`,
-    name: `Stream ${i + 1}`,
-    chunkUrls: [testUrls[i % testUrls.length], testUrls[(i + 1) % testUrls.length]],
-    durations: [testDuration, testDuration],
+    name: `${mediaType.value.toUpperCase()} Stream ${i + 1}`,
+    chunkUrls: [urls[i % urls.length], urls[(i + 1) % urls.length]],
+    durations: [dur, dur],
   }));
 });
 

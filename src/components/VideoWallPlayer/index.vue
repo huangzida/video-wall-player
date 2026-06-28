@@ -201,7 +201,8 @@ const isAudioChunk = computed(() => {
   const primary = primaryResource.value;
   if (!primary) return false;
   const url = primary.chunkUrls[activeChunkIndex.value] || "";
-  return url.toLowerCase().includes(".wav");
+  // ponytail: extension sniff — query/hash tolerant. Add more exts here if needed.
+  return /\.(wav|mp3)(?:[?#]|$)/i.test(url);
 });
 
 // --- Media element ref binding: register with sync + keep local handle ---
@@ -635,7 +636,7 @@ defineExpose({
               class="absolute inset-0 flex flex-col items-center justify-center gap-4 vwp-text-secondary pointer-events-none bg-gradient-to-b from-transparent to-black/20"
             >
               <div
-                class="p-4 rounded-full bg-white/5 border vwp-border backdrop-blur-sm"
+                class="w-16 h-16 flex items-center justify-center rounded-full bg-white/5 border vwp-border backdrop-blur-sm"
               >
                 <AudioLines class="w-8 h-8 vwp-accent" />
               </div>
