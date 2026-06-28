@@ -10,6 +10,7 @@ import {
   Rewind,
   SkipBack,
   SkipForward,
+  Volume1,
   Volume2,
   VolumeX,
   X,
@@ -446,6 +447,7 @@ onUnmounted(() => {
           @click="handleVolumeClick"
         >
           <VolumeX v-if="muted || volume === 0" :class="sizeClasses.icon" />
+          <Volume1 v-else-if="volume <= 50" :class="sizeClasses.icon" />
           <Volume2 v-else :class="sizeClasses.icon" />
         </div>
 

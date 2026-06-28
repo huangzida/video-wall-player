@@ -187,14 +187,13 @@ const segmentList = computed(() => {
   const primary = primaryResource.value;
   if (!primary) return [];
   return primary.chunkUrls.map((url, index) => {
+    // Custom name if provided, else derive from URL (e.g. "1.mp4")
+    const customName = primary.segmentNames?.[index];
+    if (customName) return { index, name: customName, duration: Math.max(0, primary.durations[index] || 0) };
     const chunkNo = index + 1;
     const match = url.match(/\.([0-9a-z]+)(?:[?#]|$)/i);
     const suffix = match ? `.${match[1]}` : "";
-    return {
-      index,
-      name: `${chunkNo}${suffix}`,
-      duration: Math.max(0, primary.durations[index] || 0),
-    };
+    return { index, name: `${chunkNo}${suffix}`, duration: Math.max(0, primary.durations[index] || 0) };
   });
 });
 

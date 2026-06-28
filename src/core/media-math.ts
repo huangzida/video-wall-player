@@ -129,5 +129,10 @@ export function normalizeResource(input: MediaResourceInput): MediaResource {
 
   const result: MediaResource = { id, name, chunkUrls: input.chunkUrls, durations };
   if (poster !== undefined) result.poster = poster;
+  // Align segmentNames to chunkUrls length (like durations), padding with undefined.
+  const rawNames = input.segmentNames;
+  if (rawNames && rawNames.length > 0) {
+    result.segmentNames = input.chunkUrls.map((_, i) => rawNames[i] ?? `Segment ${i + 1}`);
+  }
   return result;
 }

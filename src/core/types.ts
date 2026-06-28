@@ -15,6 +15,7 @@ export interface MediaResource {
   chunkUrls: string[]; // always >= 1 entry after normalize
   durations: number[]; // always >= 1 entry, aligned with chunkUrls; 0 if unknown
   poster?: string;
+  segmentNames?: string[]; // custom display names per segment, aligned with chunkUrls; falls back to "Segment N"
 }
 
 /** Shared required id/name/poster fields for the object input shapes. */
@@ -34,7 +35,7 @@ interface MediaResourceObjectBase {
 export type MediaResourceInput =
   | string
   | (MediaResourceObjectBase & { src: string })
-  | (MediaResourceObjectBase & { chunkUrls: string[]; durations?: number[] });
+  | (MediaResourceObjectBase & { chunkUrls: string[]; durations?: number[]; segmentNames?: string[] });
 
 /**
  * Player state shape (consumed by `<PlayerControls>`, exposed by
