@@ -33,7 +33,8 @@ export default defineConfig({
     },
   },
   server: {
-    https: true,
+    // ponytail: HTTPS is enabled by @vitejs/plugin-basic-ssl above (it sets
+    // server.https during config resolve); vite 8 no longer accepts `https: true`.
     fs: {
       allow: ['..'],
     },

@@ -23,7 +23,7 @@
   "scripts": {
     "demo:build": "vite build",
     "demo:dev": "vite",
-    "dev": "vite",
+    "dev": "vite --open",
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "vite build -c vite.config.lib.ts && vite build -c vite.config.lib.auto.ts",

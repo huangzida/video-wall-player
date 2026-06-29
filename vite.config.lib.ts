@@ -8,7 +8,7 @@ export default defineConfig({
     vue(),
     dts({
       tsconfigPath: './tsconfig.json',
-      outDir: 'dist/types',
+      outDirs: 'dist/types',
       cleanVueFileName: true,
       exclude: ['src/test/**']
     })
