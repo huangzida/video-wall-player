@@ -7,6 +7,7 @@
       "type": "npm",
       "script": "dev",
       "isBackground": true,
+      "group": "build",
       "problemMatcher": {
         "owner": "vite",
         "pattern": { "regexp": "^\\s*$" },
@@ -23,6 +24,7 @@
       "detail": "构建库（lib + lib.auto 双 build）",
       "type": "npm",
       "script": "build",
+      "group": "build",
       "problemMatcher": [],
       "presentation": { "reveal": "always", "panel": "dedicated" }
     },
@@ -31,6 +33,7 @@
       "detail": "build + changelog + bumpp 推送 tag",
       "type": "npm",
       "script": "release",
+      "group": "build",
       "problemMatcher": [],
       "presentation": { "reveal": "always", "panel": "dedicated" }
     }

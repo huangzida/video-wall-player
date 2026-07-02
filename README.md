@@ -71,9 +71,12 @@ const resources = [
 
 // With custom segment names (sidebar shows these instead of auto-derived "1.mp4")
 { id: 'cam-1', name: 'Camera 1', chunkUrls: ['seg-0.mp4', 'seg-1.mp4'], durations: [120, 120], segmentNames: ['Morning Patrol', 'Afternoon Patrol'] }
+
+// With per-segment dates (grouped into a date tree in the sidebar; ISO string or epoch ms)
+{ id: 'cam-1', name: 'Camera 1', chunkUrls: ['seg-0.mp4', 'seg-1.mp4'], segmentDates: ['2026-07-01', '2026-07-02'] }
 ```
 
-Empty `chunkUrls` throws (fail-loud). `durations` defaults to `0` (unknown) and is padded/clamped to match `chunkUrls` length. `segmentNames` (optional) sets custom display names per segment in the sidebar; defaults to URL-derived names (e.g. `1.mp4`).
+Empty `chunkUrls` throws (fail-loud). `durations` defaults to `0` (unknown) and is padded/clamped to match `chunkUrls` length. `segmentNames` (optional) sets custom display names per segment in the sidebar; defaults to URL-derived names (e.g. `1.mp4`). `segmentDates` (optional) groups segments by date in the sidebar as a collapsible tree; accepts ISO strings or epoch ms. Groups are sorted ascending (earliest first), collapsed by default, auto-expand on seek. Per-segment `undefined` → "Other" bucket (last). Absent → flat list (backward compatible).
 
 ## `<VideoWallPlayer>` props
 

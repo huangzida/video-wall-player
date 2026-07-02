@@ -2,7 +2,7 @@
 import { computed, nextTick, ref, watch, onMounted } from "vue";
 import type { ComponentPublicInstance } from "vue";
 import { useFullscreen, onKeyStroke } from "@vueuse/core";
-import { AudioLines, Volume2, VolumeX, AlertCircle, RefreshCw, Maximize2 } from "lucide-vue-next";
+import { AudioLines, Volume2, VolumeX, AlertCircle, RefreshCw, Maximize2, ChevronRight, ChevronDown } from "lucide-vue-next";
 import PlayerControls from "../PlayerControls/index.vue";
 import SegmentNav from "../SegmentNav/index.vue";
 import { useVideoWallState } from "../../core/useVideoWallState";
@@ -186,6 +186,15 @@ const gridStyle = computed(() => ({
 
 const { toggle: toggleFullscreen } = useFullscreen(wallRef);
 
+// ponytail: normalise a date value to YYYY-MM-DD for grouping. Undefined/null →
+// undefined (segments without a date fall into the "其他" bucket). Invalid dates
+// also collapse to undefined so we don't create bogus groups.
+function dateKeyOf(v: string | number | undefined): string | undefined {
+  if (v === undefined || v === null) return undefined;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString().slice(0, 10);
+}
+
 // Segment list for the sidebar (derived from normalized primary).
 const segmentList = computed(() => {
   const primary = primaryResource.value;
@@ -193,13 +202,60 @@ const segmentList = computed(() => {
   return primary.chunkUrls.map((url, index) => {
     // Custom name if provided, else derive from URL (e.g. "1.mp4")
     const customName = primary.segmentNames?.[index];
-    if (customName) return { index, name: customName, duration: Math.max(0, primary.durations[index] || 0) };
+    const dateVal = primary.segmentDates?.[index];
+    const dateKey = dateKeyOf(dateVal);
+    if (customName) return { index, name: customName, duration: Math.max(0, primary.durations[index] || 0), dateKey };
     const chunkNo = index + 1;
     const match = url.match(/\.([0-9a-z]+)(?:[?#]|$)/i);
     const suffix = match ? `.${match[1]}` : "";
-    return { index, name: `${chunkNo}${suffix}`, duration: Math.max(0, primary.durations[index] || 0) };
+    return { index, name: `${chunkNo}${suffix}`, duration: Math.max(0, primary.durations[index] || 0), dateKey };
   });
 });
+
+// Grouped segment list: segments bucketed by dateKey, sorted ascending.
+// Only used when segmentDates are present; falls back to flat segmentList.
+const groupedSegmentList = computed(() => {
+  const segments = segmentList.value;
+  if (segments.length === 0) return [];
+  const hasDates = segments.some(s => s.dateKey !== undefined);
+  if (!hasDates) return [];
+  const groups = new Map<string, typeof segments>();
+  for (const s of segments) {
+    const key = s.dateKey ?? '';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(s);
+  }
+  // Defined keys sorted ascending; '' (Other) bucket last.
+  const definedKeys = Array.from(groups.keys()).filter(k => k !== '').sort();
+  const result: Array<{ key: string; label: string; segments: typeof segments }> = [];
+  for (const key of definedKeys) {
+    result.push({ key, label: key, segments: groups.get(key)! });
+  }
+  const others = groups.get('');
+  if (others) result.push({ key: '', label: '其他', segments: others });
+  return result;
+});
+
+const toggleDateGroup = (key: string) => {
+  const next = new Set(expandedDates.value);
+  if (next.has(key)) next.delete(key);
+  else next.add(key);
+  expandedDates.value = next;
+};
+
+const expandedDates = ref<Set<string>>(new Set());
+
+// Auto-expand the active segment's date group on mount and when it changes.
+watch(activeChunkIndex, (newIdx) => {
+  const seg = segmentList.value[newIdx];
+  if (seg?.dateKey) {
+    expandedDates.value = new Set([...expandedDates.value, seg.dateKey]);
+    nextTick(() => {
+      const el = document.querySelector(`[data-segment="${seg.index}"]`);
+      el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+  }
+}, { immediate: true });
 
 const isAudioChunk = computed(() => {
   const primary = primaryResource.value;
@@ -550,29 +606,77 @@ defineExpose({
         >
       </div>
       <div class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
-        <div
-          v-for="segment in segmentList"
-          :key="segment.index"
-          class="group relative cursor-pointer rounded-lg px-3 py-2.5 text-sm transition-all duration-200 border border-transparent"
-          :class="
-            activeChunkIndex === segment.index
-              ? 'vwp-accent-bg-soft vwp-border vwp-accent'
-              : 'hover:bg-white/5 vwp-text-secondary hover:text-gray-200'
-          "
-          @click="handleSegmentClick(segment.index)"
-        >
-          <div class="flex justify-between items-center relative z-10">
-            <span class="truncate font-medium">{{ segment.name }}</span>
-            <span
-              class="text-xs font-mono opacity-60 group-hover:opacity-100 transition-opacity"
-              >{{ formatTime(segment.duration) }}</span
-            >
-          </div>
+        <!-- ponytail: flat list when no segmentDates, grouped tree when dates present -->
+        <template v-if="groupedSegmentList.length === 0">
           <div
-            v-if="activeChunkIndex === segment.index"
-            class="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-lg vwp-accent-bg"
-          ></div>
-        </div>
+            v-for="segment in segmentList"
+            :key="segment.index"
+            :data-segment="segment.index"
+            class="group relative cursor-pointer rounded-lg px-3 py-2.5 text-sm transition-all duration-200 border border-transparent"
+            :class="
+              activeChunkIndex === segment.index
+                ? 'vwp-accent-bg-soft vwp-border vwp-accent'
+                : 'hover:bg-white/5 vwp-text-secondary hover:text-gray-200'
+            "
+            @click="handleSegmentClick(segment.index)"
+          >
+            <div class="flex justify-between items-center relative z-10">
+              <span class="truncate font-medium" :title="segment.name">{{ segment.name }}</span>
+              <span
+                class="text-xs font-mono opacity-60 group-hover:opacity-100 transition-opacity"
+                >{{ formatTime(segment.duration) }}</span
+              >
+            </div>
+            <div
+              v-if="activeChunkIndex === segment.index"
+              class="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-lg vwp-accent-bg"
+            ></div>
+          </div>
+        </template>
+        <template v-else>
+          <div v-for="group in groupedSegmentList" :key="group.key" class="space-y-0.5">
+            <!-- Group header (clickable collapse/expand) -->
+            <div
+              class="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold tracking-wide uppercase vwp-text-secondary cursor-pointer select-none rounded-md hover:bg-white/5 transition-colors"
+              @click="toggleDateGroup(group.key)"
+              :title="`${group.label} (${group.segments.length})`"
+            >
+              <component
+                :is="expandedDates.has(group.key) ? ChevronDown : ChevronRight"
+                class="w-3.5 h-3.5 shrink-0"
+              />
+              <span class="truncate">{{ group.key ? group.label : '其他' }}</span>
+              <span class="ml-auto text-xs font-mono opacity-60">{{ group.segments.length }}</span>
+            </div>
+            <!-- Group children (segments, shown only when expanded) -->
+            <template v-if="expandedDates.has(group.key)">
+              <div
+                v-for="segment in group.segments"
+                :key="segment.index"
+                :data-segment="segment.index"
+                class="group relative cursor-pointer rounded-lg px-3 py-2 text-sm transition-all duration-200 border border-transparent ml-2"
+                :class="
+                  activeChunkIndex === segment.index
+                    ? 'vwp-accent-bg-soft vwp-border vwp-accent'
+                    : 'hover:bg-white/5 vwp-text-secondary hover:text-gray-200'
+                "
+                @click="handleSegmentClick(segment.index)"
+              >
+                <div class="flex justify-between items-center relative z-10">
+                  <span class="truncate font-medium" :title="segment.name">{{ segment.name }}</span>
+                  <span
+                    class="text-xs font-mono opacity-60 group-hover:opacity-100 transition-opacity"
+                    >{{ formatTime(segment.duration) }}</span
+                  >
+                </div>
+                <div
+                  v-if="activeChunkIndex === segment.index"
+                  class="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-lg vwp-accent-bg"
+                ></div>
+              </div>
+            </template>
+          </div>
+        </template>
       </div>
     </div>
 

@@ -134,5 +134,8 @@ export function normalizeResource(input: MediaResourceInput): MediaResource {
   if (rawNames && rawNames.length > 0) {
     result.segmentNames = input.chunkUrls.map((_, i) => rawNames[i] ?? `Segment ${i + 1}`);
   }
+  // ponytail: pass-through segmentDates (mirror poster, not segmentNames). Per-index
+  // undefined is meaningful (no date → UI "Other" bucket); padding would fabricate dates.
+  if (input.segmentDates !== undefined) result.segmentDates = input.segmentDates;
   return result;
 }

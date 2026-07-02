@@ -28,12 +28,16 @@ const resources = computed(() => {
   // ponytail: known durations — mp4=90s, mp3/wav=97s (实测).
   const durByType: Record<string, number> = { mp4: 90, mp3: 97, wav: 97 };
   const dur = durByType[mediaType.value];
-  return Array.from({ length: videoCount.value }, (_, i) => ({
-    id: `res-${i + 1}`,
-    name: `${mediaType.value.toUpperCase()} Stream ${i + 1}`,
-    chunkUrls: [urls[i % urls.length], urls[(i + 1) % urls.length]],
-    durations: [dur, dur],
-  }));
+  return Array.from({ length: videoCount.value }, (_, i) => {
+    const c = (offset: number) => urls[(i + offset) % urls.length];
+    return {
+      id: `res-${i + 1}`,
+      name: `${mediaType.value.toUpperCase()} Stream ${i + 1}`,
+      chunkUrls: [c(0), c(1), c(2), c(3)],
+      durations: [dur, dur, dur, dur],
+      segmentDates: ['2026-06-28', '2026-06-28', '2026-07-01', '2026-07-01'],
+    };
+  });
 });
 
 const autoplay = useStorage('demo-autoplay', false);

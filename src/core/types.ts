@@ -16,6 +16,7 @@ export interface MediaResource {
   durations: number[]; // always >= 1 entry, aligned with chunkUrls; 0 if unknown
   poster?: string;
   segmentNames?: string[]; // custom display names per segment, aligned with chunkUrls; falls back to "Segment N"
+  segmentDates?: (string | number)[]; // per-segment date: ISO string ("2026-07-01" or "2026-07-01T14:30:00") OR epoch ms; aligned with chunkUrls; absent entry = no date
 }
 
 /** Shared required id/name/poster fields for the object input shapes. */
@@ -35,7 +36,7 @@ interface MediaResourceObjectBase {
 export type MediaResourceInput =
   | string
   | (MediaResourceObjectBase & { src: string })
-  | (MediaResourceObjectBase & { chunkUrls: string[]; durations?: number[]; segmentNames?: string[] });
+  | (MediaResourceObjectBase & { chunkUrls: string[]; durations?: number[]; segmentNames?: string[]; segmentDates?: (string | number)[] });
 
 /**
  * Player state shape (consumed by `<PlayerControls>`, exposed by

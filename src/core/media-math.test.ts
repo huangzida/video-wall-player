@@ -239,6 +239,88 @@ describe('normalizeResource', () => {
     });
   });
 
+  describe('segmentDates', () => {
+    it('passes segmentDates through when provided (deep-equal)', () => {
+      const r = normalizeResource({
+        id: 'r6',
+        name: 'dated',
+        chunkUrls: ['a.mp4', 'b.mp4'],
+        segmentDates: ['2026-07-01', '2026-07-02'],
+      });
+      expect(r.segmentDates).toEqual(['2026-07-01', '2026-07-02']);
+    });
+
+    it('passes epoch-ms dates through', () => {
+      const r = normalizeResource({
+        id: 'r6',
+        name: 'dated',
+        chunkUrls: ['a.mp4', 'b.mp4'],
+        segmentDates: [1751328000000, 1751414400000],
+      });
+      expect(r.segmentDates).toEqual([1751328000000, 1751414400000]);
+    });
+
+    it('produces no segmentDates field when input omits it', () => {
+      const r = normalizeResource({
+        id: 'r6',
+        name: 'nodate',
+        chunkUrls: ['a.mp4', 'b.mp4'],
+      });
+      expect(r.segmentDates).toBeUndefined();
+      expect('segmentDates' in r).toBe(false);
+    });
+
+    it('passes a shorter segmentDates through as-is (NOT padded to chunkUrls)', () => {
+      // Pass-through decision: partial segmentDates must NOT be padded — padding
+      // would fabricate a date for a segment that has none.
+      const r = normalizeResource({
+        id: 'r6',
+        name: 'partial',
+        chunkUrls: ['a.mp4', 'b.mp4', 'c.mp4'],
+        segmentDates: ['2026-07-01'],
+      });
+      expect(r.segmentDates).toEqual(['2026-07-01']);
+      expect(r.segmentDates?.length).toBe(1);
+      expect(r.chunkUrls.length).toBe(3);
+    });
+
+    it('passes an empty array through as-is', () => {
+      const r = normalizeResource({
+        id: 'r6',
+        name: 'empty-dates',
+        chunkUrls: ['a.mp4', 'b.mp4'],
+        segmentDates: [],
+      });
+      expect(r.segmentDates).toEqual([]);
+    });
+
+    it('coexists with segmentNames and durations', () => {
+      const r = normalizeResource({
+        id: 'r6',
+        name: 'combo',
+        chunkUrls: ['a.mp4', 'b.mp4'],
+        durations: [10, 20],
+        segmentNames: ['Morning', 'Evening'],
+        segmentDates: ['2026-07-01', '2026-07-02'],
+      });
+      expect(r.segmentDates).toEqual(['2026-07-01', '2026-07-02']);
+      expect(r.segmentNames).toEqual(['Morning', 'Evening']);
+      expect(r.durations).toEqual([10, 20]);
+    });
+
+    it('string shorthand does not set segmentDates', () => {
+      const r = normalizeResource('a.mp4');
+      expect(r.segmentDates).toBeUndefined();
+      expect('segmentDates' in r).toBe(false);
+    });
+
+    it('{ src } shorthand does not set segmentDates', () => {
+      const r = normalizeResource({ id: 'r6', name: 's', src: 'a.mp4' });
+      expect(r.segmentDates).toBeUndefined();
+      expect('segmentDates' in r).toBe(false);
+    });
+  });
+
   describe('validation', () => {
     it('throws when chunkUrls is empty', () => {
       expect(() =>
